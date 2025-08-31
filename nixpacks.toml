@@ -1,0 +1,25 @@
+# Nixpacks configuration for Railway
+# This file tells Railway how to build your .NET 8 application
+
+[phases.setup]
+# Install .NET 8 SDK and other required packages
+nixPkgs = ["dotnet-sdk_8", "postgresql"]
+
+[phases.install]
+# Restore NuGet packages
+cmds = ["dotnet restore"]
+
+[phases.build]
+# Build and publish the application
+cmds = ["dotnet publish -c Release -o out --no-restore"]
+
+[start]
+# Start the application using the PORT environment variable from Railway
+cmd = "dotnet out/WebsiteBuilderAPI.dll"
+
+[variables]
+# Railway provides PORT environment variable
+ASPNETCORE_URLS = "http://0.0.0.0:$PORT"
+ASPNETCORE_ENVIRONMENT = "Production"
+# Enable detailed errors for debugging (remove in production)
+ASPNETCORE_DETAILEDERRORS = "true"

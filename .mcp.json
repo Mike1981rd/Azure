@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "supabase": {
+      "command": "mcp-server-supabase",
+      "env": {
+        "SUPABASE_URL": "https://gvxqatvwkjmkvaslbevh.supabase.co",
+        "SUPABASE_ACCESS_TOKEN": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd2eHFhdHZ3a2pta3Zhc2xiZXZoIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjM2NDk2NiwiZXhwIjoyMDcxOTQwOTY2fQ.PcpBLRo5Mf5jBC4IQO_ineBHjVIj7npK9JhW5dJlUKI"
+      }
+    },
+    "railway": {
+      "command": "npx",
+      "args": ["-y", "@jasontanswe/railway-mcp"],
+      "env": {
+        "RAILWAY_API_TOKEN": "${RAILWAY_API_TOKEN}"
+      }
+    }
+  }
+}

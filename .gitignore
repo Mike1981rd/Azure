@@ -1,0 +1,165 @@
+# Visual Studio files
+.vs/
+*.vsidx
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# Visual Studio cache files
+*.vspscc
+*.vssscc
+.builds
+*.pidb
+*.svclog
+*.scc
+
+# Visual Studio profiler
+*.psess
+*.vsp
+*.vspx
+*.sap
+
+# Visual Studio code coverage
+*.coverage
+*.coveragexml
+
+# NCrunch
+_NCrunch_*
+.*crunch*.local.xml
+nCrunchTemp_*
+
+# NuGet
+*.nupkg
+*.snupkg
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
+*.nuget.props
+*.nuget.targets
+
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Compiled output
+dist/
+tmp/
+out-tsc/
+bazel-out/
+
+# IDE
+.idea/
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+# Misc
+.sass-cache/
+connect.lock
+coverage/
+libpeerconnection.log
+testem.log
+typings/
+.angular/
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# SQLite
+*.db
+*.db-shm
+*.db-wal
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/tasks.json
+# Serilog log files
+logs/
+*.log
+.git-ssh/
+
+# Visual Studio files
+.vs/
+obj/
+bin/
+
+# Playwright MCP
+.playwright-mcp/
+
+# Test images and temporary files
+Test Images/
+*.cache.json
+
+# .NET Core / ASP.NET Core
+*.dll
+*.exe
+*.pdb
+*.deps.json
+*.runtimeconfig.json
+WebsiteBuilderAPI
+publish/
+out/
+
+# Railway specific
+.railway/
+
+# Ensure websitebuilder-admin is not included in backend repo
+websitebuilder-admin/
+
+# Azure CLI local config
+.azure/
+bin/
+obj/
+
+# Next.js build output
+.next/
+out/
+
+# Published archives
+publish.tgz
+*.tgz
+.out-publish/
+
+# Binary files
+*.dll
+*.pdb
+*.exe
+*.so
+*.dylib
