@@ -80,6 +80,7 @@ try
         options.UseNpgsql(dataSource, o => 
         {
             o.UseQuerySplittingBehavior(QuerySplittingBehavior.SingleQuery);
+            o.EnableRetryOnFailure(5, TimeSpan.FromSeconds(5), null);
         }));
 
     // Configurar JWT Authentication
@@ -446,15 +447,54 @@ try
         }
     });
 
+    // Database connection diagnostics
+    try
+    {
+        var cs = app.Configuration.GetConnectionString("DefaultConnection");
+        if (!string.IsNullOrEmpty(cs))
+        {
+            var csBuilder = new Npgsql.NpgsqlConnectionStringBuilder(cs);
+            Log.Information("DB Config - Host: {Host}, Port: {Port}, Database: {Database}, Username: {Username}", 
+                csBuilder.Host, csBuilder.Port, csBuilder.Database, csBuilder.Username);
+            
+            // Test direct connection
+            try
+            {
+                using var conn = new Npgsql.NpgsqlConnection(cs);
+                await conn.OpenAsync();
+                using var cmd = new Npgsql.NpgsqlCommand("SELECT 1", conn);
+                var result = await cmd.ExecuteScalarAsync();
+                Log.Information("Direct PG connection SUCCESS - SELECT 1 returned: {Result}", result);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Direct PG connection FAILED: {Message}", ex.Message);
+                if (ex.InnerException != null)
+                {
+                    Log.Error("Inner exception: {InnerMessage}", ex.InnerException.Message);
+                }
+            }
+        }
+    }
+    catch (Exception ex)
+    {
+        Log.Error(ex, "Failed to test database connection");
+    }
+
     // Seed data
     using (var scope = app.Services.CreateScope())
     {
         var services = scope.ServiceProvider;
         try
         {
-            Log.Information("Initializing database");
+            Log.Information("Initializing database with EF Core");
             var defaultConn = app.Configuration.GetConnectionString("DefaultConnection");
             var migrationsConn = app.Configuration["MIGRATIONS__DefaultConnection"];
+            
+            // Test EF Core connection
+            var context = services.GetRequiredService<ApplicationDbContext>();
+            var canConnect = await context.Database.CanConnectAsync();
+            Log.Information("EF Core CanConnect = {CanConnect}", canConnect);
 
             // Prefer dedicated migrations connection (e.g., direct 5432) when available
             if (!string.IsNullOrWhiteSpace(migrationsConn))
@@ -471,8 +511,8 @@ try
             else
             {
                 // Fallback: use the default registered context (may be behind a pooler)
-                var context = services.GetRequiredService<ApplicationDbContext>();
-                context.Database.Migrate();
+                var dbContext = services.GetRequiredService<ApplicationDbContext>();
+                dbContext.Database.Migrate();
             }
 
             // SeedData.Initialize está comentado - el sistema ya tiene datos iniciales

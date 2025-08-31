@@ -30,6 +30,7 @@ namespace WebsiteBuilderAPI.Data
         public DbSet<ProductShoppingCart> ProductShoppingCarts { get; set; }
         public DbSet<Perro> Perros { get; set; }
         public DbSet<Cat> Cats { get; set; }
+        public DbSet<Gato> Gatos { get; set; }
         
         // Entidades de autenticación
         public DbSet<User> Users { get; set; }

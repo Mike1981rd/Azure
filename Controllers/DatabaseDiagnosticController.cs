@@ -56,7 +56,8 @@ namespace WebsiteBuilderAPI.Controllers
 
                 // 3. Execute SELECT 1
                 var conn = _context.Database.GetDbConnection();
-                await conn.OpenAsync();
+                if (conn.State != System.Data.ConnectionState.Open)
+                    await conn.OpenAsync();
                 using var cmd = conn.CreateCommand();
                 cmd.CommandText = "SELECT 1";
                 var result = await cmd.ExecuteScalarAsync();
@@ -206,6 +207,49 @@ namespace WebsiteBuilderAPI.Controllers
                 {
                     ok = false,
                     message = $"Failed to list tables: {ex.Message}",
+                    error = ex.ToString()
+                });
+            }
+        }
+
+        [HttpGet("gatos")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetGatos()
+        {
+            try
+            {
+                var gatos = await _context.Gatos.ToListAsync();
+                
+                // Si no hay gatos, crear uno de prueba
+                if (!gatos.Any())
+                {
+                    _logger.LogInformation("No gatos found, creating test gato");
+                    var testGato = new Models.Gato
+                    {
+                        Nombre = "Mittens",
+                        Edad = 3,
+                        Domestico = true,
+                        CreatedAt = DateTime.UtcNow
+                    };
+                    _context.Gatos.Add(testGato);
+                    await _context.SaveChangesAsync();
+                    gatos = await _context.Gatos.ToListAsync();
+                }
+                
+                return Ok(new
+                {
+                    ok = true,
+                    count = gatos.Count,
+                    gatos = gatos
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to get gatos");
+                return Ok(new
+                {
+                    ok = false,
+                    message = $"Failed to get gatos: {ex.Message}",
                     error = ex.ToString()
                 });
             }
