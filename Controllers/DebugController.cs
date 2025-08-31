@@ -89,7 +89,7 @@ namespace WebsiteBuilderAPI.Controllers
             }
         }
 
-        [HttpGet("tables")]
+        [HttpGet("tables-raw")]
         public async Task<IActionResult> GetTables()
         {
             try
