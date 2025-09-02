@@ -153,6 +153,16 @@ namespace WebsiteBuilderAPI.Controllers
         {
             try
             {
+                // Validate input to avoid null reference issues
+                if (!ModelState.IsValid || string.IsNullOrWhiteSpace(dto.Message))
+                {
+                    return BadRequest(new ApiResponse<object>
+                    {
+                        Success = false,
+                        Message = "Invalid request: message is required"
+                    });
+                }
+
                 var companyId = GetCompanyId();
 
                 // Find conversation
@@ -168,11 +178,46 @@ namespace WebsiteBuilderAPI.Controllers
                     });
                 }
 
+                // Idempotency: prefer client-provided id; fallback to same-body window
+                WhatsAppMessage? existing = null;
+                if (!string.IsNullOrWhiteSpace(dto.ClientMessageId))
+                {
+                    existing = await _context.WhatsAppMessages.AsNoTracking()
+                        .Where(m => m.CompanyId == companyId && m.ConversationId == conversation.Id)
+                        .Where(m => m.Direction == "outbound" && m.Source == "widget")
+                        .Where(m => m.TwilioSid == dto.ClientMessageId)
+                        .FirstOrDefaultAsync();
+                }
+                if (existing == null)
+                {
+                    var dedupeSince = DateTime.UtcNow.AddMinutes(-2);
+                    existing = await _context.WhatsAppMessages.AsNoTracking()
+                        .Where(m => m.CompanyId == companyId && m.ConversationId == conversation.Id)
+                        .Where(m => m.Direction == "outbound" && m.Source == "widget")
+                        .Where(m => m.Timestamp >= dedupeSince)
+                        .Where(m => m.Body == dto.Message)
+                        .FirstOrDefaultAsync();
+                }
+
+                if (existing != null)
+                {
+                    _logger.LogInformation("Duplicate widget response suppressed for conversation {ConversationId}", conversationId);
+                    return Ok(new ApiResponse<object>
+                    {
+                        Success = true,
+                        Message = "Duplicate suppressed",
+                        Data = new { messageId = existing.Id, timestamp = existing.Timestamp }
+                    });
+                }
+
                 // Create the response message
                 var message = new WhatsAppMessage
                 {
                     Id = Guid.NewGuid(),
-                    TwilioSid = $"WDR{Guid.NewGuid().ToString("N").Substring(0, 12)}",  // Max 15 chars for responses
+                    // Use client-provided id if available for idempotency, else random
+                    TwilioSid = !string.IsNullOrWhiteSpace(dto.ClientMessageId)
+                        ? dto.ClientMessageId!.Length > 100 ? dto.ClientMessageId!.Substring(0, 100) : dto.ClientMessageId!
+                        : $"WDR{Guid.NewGuid().ToString("N").Substring(0, 12)}",
                     From = "business",
                     To = conversation.CustomerPhone,
                     Body = dto.Message,
@@ -240,8 +285,7 @@ namespace WebsiteBuilderAPI.Controllers
                 
                 var query = _context.WhatsAppMessages
                     .Where(m => m.SessionId == sessionId && 
-                           m.CompanyId == companyId &&
-                           m.Direction == "outbound");  // Only return agent responses
+                           m.CompanyId == companyId);  // Return all messages for the session
 
                 if (since.HasValue)
                 {
@@ -271,7 +315,7 @@ namespace WebsiteBuilderAPI.Controllers
                     {
                         id = m.Id,
                         body = m.Body,
-                        isFromMe = m.Direction == "outbound",
+                        isFromMe = m.Direction == "inbound",  // inbound = from customer (widget user)
                         timestamp = m.Timestamp,
                         status = m.Status,
                         agentName = agentName
