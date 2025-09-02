@@ -25,6 +25,24 @@ namespace WebsiteBuilderAPI.Models
         public string? CustomerName { get; set; }
 
         /// <summary>
+        /// Customer's email (for widget conversations)
+        /// </summary>
+        [StringLength(255)]
+        public string? CustomerEmail { get; set; }
+
+        /// <summary>
+        /// Source of the conversation: whatsapp, widget
+        /// </summary>
+        [StringLength(20)]
+        public string Source { get; set; } = "whatsapp";
+
+        /// <summary>
+        /// Session ID for widget conversations
+        /// </summary>
+        [StringLength(100)]
+        public string? SessionId { get; set; }
+
+        /// <summary>
         /// Business WhatsApp number
         /// </summary>
         [Required]

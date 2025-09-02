@@ -102,6 +102,7 @@ namespace WebsiteBuilderAPI.Data
         // WhatsApp entities
         public DbSet<WhatsAppConfig> WhatsAppConfigs { get; set; }
         public DbSet<WhatsAppMessage> WhatsAppMessages { get; set; }
+        public DbSet<WhatsAppConversation> WhatsAppConversations { get; set; }
         public DbSet<ContactMessage> ContactMessages { get; set; }
         public DbSet<ContactNotificationSettings> ContactNotificationSettings { get; set; }
 

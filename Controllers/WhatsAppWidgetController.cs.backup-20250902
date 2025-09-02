@@ -1,0 +1,391 @@
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
+using WebsiteBuilderAPI.Data;
+using WebsiteBuilderAPI.DTOs.Common;
+using WebsiteBuilderAPI.DTOs.WhatsApp;
+using WebsiteBuilderAPI.Models;
+
+namespace WebsiteBuilderAPI.Controllers
+{
+    /// <summary>
+    /// Controller for WhatsApp Widget integration
+    /// Handles messages from website chat widget
+    /// </summary>
+    [ApiController]
+    [Route("api/whatsapp/widget")]
+    public class WhatsAppWidgetController : ControllerBase
+    {
+        private readonly ApplicationDbContext _context;
+        private readonly ILogger<WhatsAppWidgetController> _logger;
+
+        public WhatsAppWidgetController(
+            ApplicationDbContext context,
+            ILogger<WhatsAppWidgetController> logger)
+        {
+            _context = context;
+            _logger = logger;
+        }
+
+        /// <summary>
+        /// Receive a message from the website widget
+        /// </summary>
+        [HttpPost("message")]
+        public async Task<IActionResult> ReceiveWidgetMessage([FromBody] WidgetMessageDto dto)
+        {
+            try
+            {
+                // Get company ID from subdomain or default
+                var companyId = GetCompanyId();
+
+                // Get client IP
+                var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+                dto.IpAddress = ipAddress;
+
+                // Find or create conversation
+                var conversation = await _context.WhatsAppConversations
+                    .FirstOrDefaultAsync(c => c.SessionId == dto.SessionId && c.CompanyId == companyId);
+
+                if (conversation == null)
+                {
+                    // Create new conversation for widget
+                    conversation = new WhatsAppConversation
+                    {
+                        Id = Guid.NewGuid(),
+                        CustomerPhone = dto.CustomerPhone ?? "widget",  // Use simple "widget" for widget messages
+                        CustomerName = dto.CustomerName ?? "Website Visitor",
+                        CustomerEmail = dto.CustomerEmail,
+                        BusinessPhone = "widget", // Special identifier for widget conversations
+                        Status = "active",
+                        Priority = "normal",
+                        CompanyId = companyId,
+                        Source = "widget",
+                        SessionId = dto.SessionId,
+                        UnreadCount = 1,
+                        MessageCount = 1,
+                        LastMessagePreview = dto.Message.Length > 100 ? dto.Message.Substring(0, 100) + "..." : dto.Message,
+                        LastMessageAt = DateTime.UtcNow,
+                        LastMessageSender = "customer",
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+
+                    _context.WhatsAppConversations.Add(conversation);
+                }
+                else
+                {
+                    // Update existing conversation
+                    conversation.UnreadCount++;
+                    conversation.MessageCount++;
+                    conversation.LastMessagePreview = dto.Message.Length > 100 ? dto.Message.Substring(0, 100) + "..." : dto.Message;
+                    conversation.LastMessageAt = DateTime.UtcNow;
+                    conversation.LastMessageSender = "customer";
+                    conversation.UpdatedAt = DateTime.UtcNow;
+                    
+                    // Update customer info if provided
+                    if (!string.IsNullOrEmpty(dto.CustomerName))
+                        conversation.CustomerName = dto.CustomerName;
+                    if (!string.IsNullOrEmpty(dto.CustomerEmail))
+                        conversation.CustomerEmail = dto.CustomerEmail;
+                }
+
+                // Create the message
+                var message = new WhatsAppMessage
+                {
+                    Id = Guid.NewGuid(),
+                    TwilioSid = $"WDG{Guid.NewGuid().ToString("N").Substring(0, 12)}",  // Max 15 chars
+                    From = dto.CustomerPhone ?? "widget",  // Use simple "widget" for widget messages
+                    To = "business",
+                    Body = dto.Message,
+                    MessageType = "text",
+                    Direction = "inbound",
+                    Status = "received",
+                    ConversationId = conversation.Id,
+                    CompanyId = companyId,
+                    Source = "widget",
+                    SessionId = dto.SessionId,
+                    Timestamp = DateTime.UtcNow,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow,
+                    Metadata = JsonSerializer.Serialize(new
+                    {
+                        pageUrl = dto.PageUrl,
+                        userAgent = dto.UserAgent,
+                        ipAddress = dto.IpAddress,
+                        customerName = dto.CustomerName,
+                        customerEmail = dto.CustomerEmail
+                    })
+                };
+
+                _context.WhatsAppMessages.Add(message);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Widget message received from session {SessionId}", dto.SessionId);
+
+                return Ok(new ApiResponse<object>
+                {
+                    Success = true,
+                    Message = "Message received successfully",
+                    Data = new
+                    {
+                        conversationId = conversation.Id,
+                        messageId = message.Id,
+                        sessionId = dto.SessionId
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error receiving widget message");
+                return StatusCode(500, new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Error processing message"
+                });
+            }
+        }
+
+        /// <summary>
+        /// Send a response back to the widget
+        /// </summary>
+        [HttpPost("conversation/{conversationId}/respond")]
+        public async Task<IActionResult> SendResponseToWidget(Guid conversationId, [FromBody] WidgetResponseDto dto)
+        {
+            try
+            {
+                var companyId = GetCompanyId();
+
+                // Find conversation
+                var conversation = await _context.WhatsAppConversations
+                    .FirstOrDefaultAsync(c => c.Id == conversationId && c.CompanyId == companyId);
+
+                if (conversation == null)
+                {
+                    return NotFound(new ApiResponse<object>
+                    {
+                        Success = false,
+                        Message = "Conversation not found"
+                    });
+                }
+
+                // Create the response message
+                var message = new WhatsAppMessage
+                {
+                    Id = Guid.NewGuid(),
+                    TwilioSid = $"WDR{Guid.NewGuid().ToString("N").Substring(0, 12)}",  // Max 15 chars for responses
+                    From = "business",
+                    To = conversation.CustomerPhone,
+                    Body = dto.Message,
+                    MessageType = dto.MessageType,
+                    Direction = "outbound",
+                    Status = "sent",
+                    ConversationId = conversation.Id,
+                    CompanyId = companyId,
+                    Source = "widget",
+                    SessionId = conversation.SessionId,
+                    Timestamp = DateTime.UtcNow,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow,
+                    Metadata = JsonSerializer.Serialize(new
+                    {
+                        agentName = dto.AgentName,
+                        messageType = dto.MessageType
+                    })
+                };
+
+                _context.WhatsAppMessages.Add(message);
+
+                // Update conversation
+                conversation.MessageCount++;
+                conversation.LastMessagePreview = dto.Message.Length > 100 ? dto.Message.Substring(0, 100) + "..." : dto.Message;
+                conversation.LastMessageAt = DateTime.UtcNow;
+                conversation.LastMessageSender = "business";
+                conversation.UpdatedAt = DateTime.UtcNow;
+
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Response sent to widget conversation {ConversationId}", conversationId);
+
+                return Ok(new ApiResponse<object>
+                {
+                    Success = true,
+                    Message = "Response sent successfully",
+                    Data = new
+                    {
+                        messageId = message.Id,
+                        timestamp = message.Timestamp
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error sending response to widget");
+                return StatusCode(500, new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Error sending response"
+                });
+            }
+        }
+
+        /// <summary>
+        /// Get messages for a widget session (for polling)
+        /// </summary>
+        [HttpGet("session/{sessionId}/messages")]
+        public async Task<IActionResult> GetWidgetMessages(string sessionId, [FromQuery] DateTime? since)
+        {
+            try
+            {
+                var companyId = GetCompanyId();
+                
+                var query = _context.WhatsAppMessages
+                    .Where(m => m.SessionId == sessionId && 
+                           m.CompanyId == companyId &&
+                           m.Direction == "outbound");  // Only return agent responses
+
+                if (since.HasValue)
+                {
+                    query = query.Where(m => m.Timestamp > since.Value);
+                }
+
+                var rawMessages = await query
+                    .OrderBy(m => m.Timestamp)
+                    .ToListAsync();
+                
+                var messages = rawMessages.Select(m => {
+                    string agentName = null;
+                    if (m.Metadata != null)
+                    {
+                        try
+                        {
+                            var doc = JsonDocument.Parse(m.Metadata);
+                            if (doc.RootElement.TryGetProperty("agentName", out var prop))
+                            {
+                                agentName = prop.GetString();
+                            }
+                        }
+                        catch { }
+                    }
+                    
+                    return new
+                    {
+                        id = m.Id,
+                        body = m.Body,
+                        isFromMe = m.Direction == "outbound",
+                        timestamp = m.Timestamp,
+                        status = m.Status,
+                        agentName = agentName
+                    };
+                }).ToList();
+
+                return Ok(new ApiResponse<object>
+                {
+                    Success = true,
+                    Message = "Messages retrieved",
+                    Data = messages
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving widget messages");
+                return StatusCode(500, new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Error retrieving messages"
+                });
+            }
+        }
+
+        /// <summary>
+        /// Close a widget conversation
+        /// </summary>
+        [HttpPost("conversation/{conversationId}/close")]
+        public async Task<IActionResult> CloseWidgetConversation(Guid conversationId, [FromBody] WidgetConversationStatusDto dto)
+        {
+            try
+            {
+                var companyId = GetCompanyId();
+
+                var conversation = await _context.WhatsAppConversations
+                    .FirstOrDefaultAsync(c => c.Id == conversationId && c.CompanyId == companyId);
+
+                if (conversation == null)
+                {
+                    return NotFound(new ApiResponse<object>
+                    {
+                        Success = false,
+                        Message = "Conversation not found"
+                    });
+                }
+
+                // Update conversation status
+                conversation.Status = dto.Status;
+                conversation.UpdatedAt = DateTime.UtcNow;
+
+                // Add closing message if provided
+                if (!string.IsNullOrEmpty(dto.ClosingMessage))
+                {
+                    var closingMessage = new WhatsAppMessage
+                    {
+                        Id = Guid.NewGuid(),
+                        TwilioSid = $"widget_system_{Guid.NewGuid()}",
+                        From = "system",
+                        To = conversation.CustomerPhone,
+                        Body = dto.ClosingMessage,
+                        MessageType = "system",
+                        Direction = "outbound",
+                        Status = "sent",
+                        ConversationId = conversation.Id,
+                        CompanyId = companyId,
+                        Source = "widget",
+                        SessionId = conversation.SessionId,
+                        Timestamp = DateTime.UtcNow,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow,
+                        Metadata = JsonSerializer.Serialize(new
+                        {
+                            messageType = "closing",
+                            status = dto.Status
+                        })
+                    };
+
+                    _context.WhatsAppMessages.Add(closingMessage);
+                    conversation.LastMessagePreview = dto.ClosingMessage;
+                    conversation.LastMessageAt = DateTime.UtcNow;
+                }
+
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Widget conversation {ConversationId} closed with status {Status}", 
+                    conversationId, dto.Status);
+
+                return Ok(new ApiResponse<object>
+                {
+                    Success = true,
+                    Message = "Conversation closed successfully",
+                    Data = new
+                    {
+                        conversationId = conversation.Id,
+                        status = conversation.Status
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error closing widget conversation");
+                return StatusCode(500, new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Error closing conversation"
+                });
+            }
+        }
+
+        private int GetCompanyId()
+        {
+            // Try to get from subdomain or token
+            // For now, return default
+            return 1;
+        }
+    }
+}

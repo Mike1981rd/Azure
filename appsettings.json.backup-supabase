@@ -1,0 +1,84 @@
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Host=db.gvxqatvwkjmkvaslbevh.supabase.co;Port=5432;Database=postgres;Username=postgres;Password=AllisoN@1710.#;Timeout=30;Command Timeout=30;Pooling=true;MinPoolSize=5;MaxPoolSize=20"
+  },
+  "Jwt": {
+    "Key": "WebsiteBuilder2025SecretKeyForJWTTokenGenerationMustBeLongEnough",
+    "Issuer": "WebsiteBuilderAPI",
+    "Audience": "WebsiteBuilderClient"
+  },
+  "Serilog": {
+    "Using": [ "Serilog.Sinks.Console", "Serilog.Sinks.File" ],
+    "MinimumLevel": {
+      "Default": "Debug",
+      "Override": {
+        "Microsoft": "Information",
+        "Microsoft.AspNetCore": "Warning",
+        "Microsoft.EntityFrameworkCore": "Warning",
+        "System": "Information"
+      }
+    },
+    "WriteTo": [
+      {
+        "Name": "Console",
+        "Args": {
+          "theme": "Serilog.Sinks.SystemConsole.Themes.AnsiConsoleTheme::Code, Serilog.Sinks.Console",
+          "outputTemplate": "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}"
+        }
+      },
+      {
+        "Name": "File",
+        "Args": {
+          "path": "logs/websitebuilder-.log",
+          "rollingInterval": "Day",
+          "retainedFileCountLimit": 30,
+          "fileSizeLimitBytes": 10485760,
+          "rollOnFileSizeLimit": true,
+          "outputTemplate": "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}"
+        }
+      },
+      {
+        "Name": "File",
+        "Args": {
+          "path": "logs/errors/error-.log",
+          "rollingInterval": "Day",
+          "restrictedToMinimumLevel": "Error",
+          "retainedFileCountLimit": 30,
+          "outputTemplate": "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}"
+        }
+      }
+    ],
+    "Enrich": [ "FromLogContext", "WithMachineName", "WithThreadId" ]
+  },
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  },
+  "Encryption": {
+    "Key": "YourSuperSecretEncryptionKeyThatShouldBe32CharsOrMore!"
+  },
+  "PaymentProviders": {
+    "Azul": {
+      "TestUrl": "https://pruebas.azul.com.do/PaymentPage/",
+      "ProductionUrl": "https://pagos.azul.com.do/PaymentPage/",
+      "TestMode": true,
+      "CertificatesPath": "Certificates/Azul/",
+      "TransactionFee": 2.95
+    },
+    "Stripe": {
+      "TestMode": true,
+      "TransactionFee": 2.90
+    },
+    "PayPal": {
+      "TestMode": true,
+      "TransactionFee": 2.99
+    }
+  },
+  "WhatsApp": {
+    "Provider": "Twilio",
+    "DefaultWebhookUrl": "https://api.test1hotelwebsite.online/api/whatsapp/green-api/webhook"
+  },
+  "AllowedHosts": "*"
+}

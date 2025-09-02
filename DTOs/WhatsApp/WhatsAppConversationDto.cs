@@ -17,6 +17,8 @@ namespace WebsiteBuilderAPI.DTOs.WhatsApp
         public string? AssignedUserName { get; set; }
         public int? CustomerId { get; set; }
         public string? CustomerEmail { get; set; }
+        public string? Source { get; set; }
+        public string? SessionId { get; set; }
         public int UnreadCount { get; set; }
         public int MessageCount { get; set; }
         public string? LastMessagePreview { get; set; }

@@ -128,6 +128,18 @@ namespace WebsiteBuilderAPI.Models
         public string? Metadata { get; set; }
 
         /// <summary>
+        /// Source of the message: whatsapp, widget, api
+        /// </summary>
+        [StringLength(20)]
+        public string Source { get; set; } = "whatsapp";
+
+        /// <summary>
+        /// Session ID for widget conversations
+        /// </summary>
+        [StringLength(100)]
+        public string? SessionId { get; set; }
+
+        /// <summary>
         /// When record was created
         /// </summary>
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
