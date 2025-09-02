@@ -43,9 +43,14 @@ namespace WebsiteBuilderAPI.Services
             = new ConcurrentDictionary<int, (DateTime, List<WhatsAppConversationDto>)>();
         private const int ConversationsCacheSeconds = 60;
         // In-memory cache for recent messages per conversation (TTL ~10s)
-        private static readonly ConcurrentDictionary<(int CompanyId, Guid ConversationId), (DateTime Ts, List<WhatsAppMessageDto> Data)> _msgCache
+        internal static readonly ConcurrentDictionary<(int CompanyId, Guid ConversationId), (DateTime Ts, List<WhatsAppMessageDto> Data)> _msgCache
             = new ConcurrentDictionary<(int, Guid), (DateTime, List<WhatsAppMessageDto>)>();
         private const int MessagesCacheSeconds = 10;
+        // Allow external invalidation (e.g., widget message received)
+        public static void InvalidateMessagesCache(int companyId, Guid conversationId)
+        {
+            _msgCache.TryRemove((companyId, conversationId), out _);
+        }
         
         // Rate limiting tracking
         private readonly Dictionary<int, DateTime> _lastMessageTime = new();
@@ -655,6 +660,19 @@ namespace WebsiteBuilderAPI.Services
                 {
                     _logger.LogWarning("Conversation {ConversationId} not found for company {CompanyId}", conversationId, companyId);
                     return new List<WhatsAppMessageDto>();
+                }
+
+                // For widget-origin conversations, always serve from DB immediately and skip provider
+                if ((conversation.Source ?? string.Empty).Equals("widget", StringComparison.OrdinalIgnoreCase))
+                {
+                    var widgetDb = await _context.WhatsAppMessages.AsNoTracking()
+                        .Where(m => m.CompanyId == companyId && m.ConversationId == conversationId)
+                        .OrderBy(m => m.Timestamp)
+                        .Take(pageSize)
+                        .ToListAsync();
+                    var widgetDtos = widgetDb.Select(MapMessageToDto).ToList();
+                    _msgCache[(companyId, conversationId)] = (DateTime.UtcNow, widgetDtos);
+                    return widgetDtos;
                 }
 
                 // Quick DB read to avoid blocking UI while fetching from provider

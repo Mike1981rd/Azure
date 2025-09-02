@@ -89,11 +89,37 @@ namespace WebsiteBuilderAPI.Controllers
                         conversation.CustomerEmail = dto.CustomerEmail;
                 }
 
+                // Idempotency for client-sent messages: if ClientMessageId provided, avoid duplicates
+                if (!string.IsNullOrWhiteSpace(dto.ClientMessageId))
+                {
+                    var exists = await _context.WhatsAppMessages.AsNoTracking()
+                        .Where(m => m.CompanyId == companyId && m.ConversationId == conversation.Id)
+                        .Where(m => m.Direction == "inbound" && m.Source == "widget")
+                        .Where(m => m.TwilioSid == dto.ClientMessageId)
+                        .FirstOrDefaultAsync();
+                    if (exists != null)
+                    {
+                        return Ok(new ApiResponse<object>
+                        {
+                            Success = true,
+                            Message = "Duplicate suppressed",
+                            Data = new
+                            {
+                                conversationId = conversation.Id,
+                                messageId = exists.Id,
+                                sessionId = dto.SessionId
+                            }
+                        });
+                    }
+                }
+
                 // Create the message
                 var message = new WhatsAppMessage
                 {
                     Id = Guid.NewGuid(),
-                    TwilioSid = $"WDG{Guid.NewGuid().ToString("N").Substring(0, 12)}",  // Max 15 chars
+                    TwilioSid = !string.IsNullOrWhiteSpace(dto.ClientMessageId)
+                        ? dto.ClientMessageId!.Length > 100 ? dto.ClientMessageId!.Substring(0, 100) : dto.ClientMessageId!
+                        : $"WDG{Guid.NewGuid().ToString("N").Substring(0, 12)}",  // Max 15 chars
                     From = dto.CustomerPhone ?? "widget",  // Use simple "widget" for widget messages
                     To = "business",
                     Body = dto.Message,
@@ -119,6 +145,9 @@ namespace WebsiteBuilderAPI.Controllers
 
                 _context.WhatsAppMessages.Add(message);
                 await _context.SaveChangesAsync();
+
+                // Invalidate/refresh message cache for this conversation if using Green API service
+                try { Services.GreenApiWhatsAppService.InvalidateMessagesCache(companyId, conversation.Id); } catch { }
 
                 _logger.LogInformation("Widget message received from session {SessionId}", dto.SessionId);
 
@@ -210,6 +239,12 @@ namespace WebsiteBuilderAPI.Controllers
                     });
                 }
 
+                // If a new sessionId was provided, update conversation to bind to active widget session
+                if (!string.IsNullOrWhiteSpace(dto.SessionId) && conversation.SessionId != dto.SessionId)
+                {
+                    conversation.SessionId = dto.SessionId!;
+                }
+
                 // Create the response message
                 var message = new WhatsAppMessage
                 {
@@ -227,7 +262,7 @@ namespace WebsiteBuilderAPI.Controllers
                     ConversationId = conversation.Id,
                     CompanyId = companyId,
                     Source = "widget",
-                    SessionId = conversation.SessionId,
+                    SessionId = conversation.SessionId, // now updated if dto.SessionId provided
                     Timestamp = DateTime.UtcNow,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow,
@@ -315,7 +350,7 @@ namespace WebsiteBuilderAPI.Controllers
                     {
                         id = m.Id,
                         body = m.Body,
-                        isFromMe = m.Direction == "inbound",  // inbound = from customer (widget user)
+                        isFromMe = m.Direction == "outbound",
                         timestamp = m.Timestamp,
                         status = m.Status,
                         agentName = agentName

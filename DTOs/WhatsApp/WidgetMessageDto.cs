@@ -57,6 +57,12 @@ namespace WebsiteBuilderAPI.DTOs.WhatsApp
         /// </summary>
         [StringLength(45)]
         public string? IpAddress { get; set; }
+
+        /// <summary>
+        /// Optional client-generated id to ensure idempotency on server
+        /// </summary>
+        [StringLength(100)]
+        public string? ClientMessageId { get; set; }
     }
 
     /// <summary>
@@ -110,8 +116,20 @@ namespace WebsiteBuilderAPI.DTOs.WhatsApp
         public string MessageType { get; set; } = "text";
 
         /// <summary>
+        /// Optional client-generated id to ensure idempotency
+        /// </summary>
+        [StringLength(100)]
+        public string? ClientMessageId { get; set; }
+
+        /// <summary>
         /// Timestamp of the message
         /// </summary>
         public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+
+        /// <summary>
+        /// Optional session id to bind/update the conversation's active widget session
+        /// </summary>
+        [StringLength(100)]
+        public string? SessionId { get; set; }
     }
 }
