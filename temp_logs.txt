@@ -1,0 +1,200 @@
+    javascript/auto|C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\compiled\@next\react-refresh-utils\dist\loader.js!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\build\webpack\loaders\next-flight-client-module-loader.js!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\build\webpack\loaders\next-swc-loader.js??ruleSet[1].rules[17].oneOf[5].use[1]!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\src\components\ui\ThemeCustomizer.tsx|app-pages-browser
+* javascript/auto|C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\compiled\@next\react-refresh-utils\dist\loader.js!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\build\webpack\loaders\next-flight-client-module-loader.js!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\build\webpack\loaders\next-swc-loader.js??ruleSet[1].rules[17].oneOf[5].use[1]!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\src\components\ui\button.tsx|app-pages-browser
+    Used by 1 module(s), i. e.
+    javascript/auto|C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\compiled\@next\react-refresh-utils\dist\loader.js!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\build\webpack\loaders\next-flight-client-module-loader.js!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\build\webpack\loaders\next-swc-loader.js??ruleSet[1].rules[17].oneOf[5].use[1]!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\src\components\editor\modules\Footer\FooterChildren.tsx|app-pages-browser
+
+Import trace for requested module:
+./src/components/ui/Button.tsx
+./src/components/ui/ThemeCustomizer.tsx
+./src/components/layout/DashboardLayout.tsx | Type: console | URL: http://localhost:3000/editor
+2025-08-14 22:06:06.517 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP POST /api/logs/frontend responded 200 in 8.5975 ms
+2025-08-14 22:06:16.511 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP OPTIONS /api/logs/frontend responded 204 in 0.0617 ms
+2025-08-14 22:06:16.515 -04:00 [WRN] [WebsiteBuilderAPI.Controllers.LogsController] Frontend Warning: ./src/components/ui/Button.tsx
+There are multiple modules with names that only differ in casing.
+This can lead to unexpected behavior when compiling on a filesystem with other case-semantic.
+Use equal casing. Compare these module identifiers:
+* javascript/auto|C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\compiled\@next\react-refresh-utils\dist\loader.js!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\build\webpack\loaders\next-flight-client-module-loader.js!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\build\webpack\loaders\next-swc-loader.js??ruleSet[1].rules[17].oneOf[5].use[1]!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\src\components\ui\Button.tsx|app-pages-browser
+    Used by 1 module(s), i. e.
+    javascript/auto|C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\compiled\@next\react-refresh-utils\dist\loader.js!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\build\webpack\loaders\next-flight-client-module-loader.js!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\build\webpack\loaders\next-swc-loader.js??ruleSet[1].rules[17].oneOf[5].use[1]!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\src\components\ui\ThemeCustomizer.tsx|app-pages-browser
+* javascript/auto|C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\compiled\@next\react-refresh-utils\dist\loader.js!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\build\webpack\loaders\next-flight-client-module-loader.js!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\build\webpack\loaders\next-swc-loader.js??ruleSet[1].rules[17].oneOf[5].use[1]!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\src\components\ui\button.tsx|app-pages-browser
+    Used by 1 module(s), i. e.
+    javascript/auto|C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\compiled\@next\react-refresh-utils\dist\loader.js!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\build\webpack\loaders\next-flight-client-module-loader.js!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\build\webpack\loaders\next-swc-loader.js??ruleSet[1].rules[17].oneOf[5].use[1]!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\src\components\editor\modules\Footer\FooterChildren.tsx|app-pages-browser
+
+Import trace for requested module:
+./src/components/ui/Button.tsx
+./src/components/ui/ThemeCustomizer.tsx
+./src/components/layout/DashboardLayout.tsx | Type: console | URL: http://localhost:3000/editor
+2025-08-14 22:06:16.515 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP POST /api/logs/frontend responded 200 in 2.4617 ms
+2025-08-14 22:06:21.530 -04:00 [WRN] [WebsiteBuilderAPI.Controllers.LogsController] Frontend Warning: ./src/components/ui/Button.tsx
+There are multiple modules with names that only differ in casing.
+This can lead to unexpected behavior when compiling on a filesystem with other case-semantic.
+Use equal casing. Compare these module identifiers:
+* javascript/auto|C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\compiled\@next\react-refresh-utils\dist\loader.js!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\build\webpack\loaders\next-flight-client-module-loader.js!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\build\webpack\loaders\next-swc-loader.js??ruleSet[1].rules[17].oneOf[5].use[1]!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\src\components\ui\Button.tsx|app-pages-browser
+    Used by 1 module(s), i. e.
+    javascript/auto|C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\compiled\@next\react-refresh-utils\dist\loader.js!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\build\webpack\loaders\next-flight-client-module-loader.js!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\build\webpack\loaders\next-swc-loader.js??ruleSet[1].rules[17].oneOf[5].use[1]!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\src\components\ui\ThemeCustomizer.tsx|app-pages-browser
+* javascript/auto|C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\compiled\@next\react-refresh-utils\dist\loader.js!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\build\webpack\loaders\next-flight-client-module-loader.js!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\build\webpack\loaders\next-swc-loader.js??ruleSet[1].rules[17].oneOf[5].use[1]!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\src\components\ui\button.tsx|app-pages-browser
+    Used by 1 module(s), i. e.
+    javascript/auto|C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\compiled\@next\react-refresh-utils\dist\loader.js!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\build\webpack\loaders\next-flight-client-module-loader.js!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\build\webpack\loaders\next-swc-loader.js??ruleSet[1].rules[17].oneOf[5].use[1]!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\src\components\editor\modules\Footer\FooterChildren.tsx|app-pages-browser
+
+Import trace for requested module:
+./src/components/ui/Button.tsx
+./src/components/ui/ThemeCustomizer.tsx
+./src/components/layout/DashboardLayout.tsx | Type: console | URL: http://localhost:3000/editor
+2025-08-14 22:06:21.530 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP POST /api/logs/frontend responded 200 in 8.6389 ms
+2025-08-14 22:06:26.519 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP OPTIONS /api/logs/frontend responded 204 in 0.0454 ms
+2025-08-14 22:06:26.528 -04:00 [WRN] [WebsiteBuilderAPI.Controllers.LogsController] Frontend Warning: ./src/components/ui/Button.tsx
+There are multiple modules with names that only differ in casing.
+This can lead to unexpected behavior when compiling on a filesystem with other case-semantic.
+Use equal casing. Compare these module identifiers:
+* javascript/auto|C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\compiled\@next\react-refresh-utils\dist\loader.js!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\build\webpack\loaders\next-flight-client-module-loader.js!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\build\webpack\loaders\next-swc-loader.js??ruleSet[1].rules[17].oneOf[5].use[1]!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\src\components\ui\Button.tsx|app-pages-browser
+    Used by 1 module(s), i. e.
+    javascript/auto|C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\compiled\@next\react-refresh-utils\dist\loader.js!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\build\webpack\loaders\next-flight-client-module-loader.js!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\build\webpack\loaders\next-swc-loader.js??ruleSet[1].rules[17].oneOf[5].use[1]!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\src\components\ui\ThemeCustomizer.tsx|app-pages-browser
+* javascript/auto|C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\compiled\@next\react-refresh-utils\dist\loader.js!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\build\webpack\loaders\next-flight-client-module-loader.js!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\build\webpack\loaders\next-swc-loader.js??ruleSet[1].rules[17].oneOf[5].use[1]!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\src\components\ui\button.tsx|app-pages-browser
+    Used by 1 module(s), i. e.
+    javascript/auto|C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\compiled\@next\react-refresh-utils\dist\loader.js!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\build\webpack\loaders\next-flight-client-module-loader.js!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\build\webpack\loaders\next-swc-loader.js??ruleSet[1].rules[17].oneOf[5].use[1]!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\src\components\editor\modules\Footer\FooterChildren.tsx|app-pages-browser
+
+Import trace for requested module:
+./src/components/ui/Button.tsx
+./src/components/ui/ThemeCustomizer.tsx
+./src/components/layout/DashboardLayout.tsx | Type: console | URL: http://localhost:3000/editor
+2025-08-14 22:06:26.528 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP POST /api/logs/frontend responded 200 in 7.0693 ms
+2025-08-14 22:06:44.636 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP OPTIONS /api/NavigationMenu responded 204 in 0.6056 ms
+2025-08-14 22:06:44.637 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP OPTIONS /api/NavigationMenu responded 204 in 0.0250 ms
+2025-08-14 22:06:44.637 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP OPTIONS /api/logs/frontend responded 204 in 0.0799 ms
+2025-08-14 22:06:44.654 -04:00 [INF] [WebsiteBuilderAPI.Controllers.LogsController] Frontend Log: Frontend logger initialized | Type: console | URL: http://localhost:3000/editor
+2025-08-14 22:06:44.654 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP POST /api/logs/frontend responded 200 in 9.8411 ms
+2025-08-14 22:06:44.654 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /api/NavigationMenu responded 200 in 7.8809 ms
+2025-08-14 22:06:44.673 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /api/NavigationMenu responded 200 in 3.8386 ms
+2025-08-14 22:06:44.743 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /api/NavigationMenu/1/public responded 200 in 3.8771 ms
+2025-08-14 22:06:44.754 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /api/NavigationMenu/1/public responded 200 in 9.2117 ms
+2025-08-14 22:06:44.786 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP OPTIONS /api/company/current responded 204 in 0.0479 ms
+2025-08-14 22:06:44.788 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP OPTIONS /api/company/current responded 204 in 0.0584 ms
+2025-08-14 22:06:44.789 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP OPTIONS /api/company/current responded 204 in 0.0793 ms
+2025-08-14 22:06:44.789 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP OPTIONS /api/auth/me responded 204 in 0.0434 ms
+2025-08-14 22:06:44.792 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP OPTIONS /api/company/current responded 204 in 0.0461 ms
+2025-08-14 22:06:44.793 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP OPTIONS /api/company/current responded 204 in 0.0625 ms
+2025-08-14 22:06:44.794 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP OPTIONS /api/auth/me responded 204 in 0.0621 ms
+2025-08-14 22:06:44.863 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /api/company/current responded 200 in 2.0864 ms
+2025-08-14 22:06:44.900 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /api/auth/me responded 200 in 38.8373 ms
+2025-08-14 22:06:44.910 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /api/company/current responded 200 in 2.1976 ms
+2025-08-14 22:06:44.971 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /api/auth/me responded 200 in 60.9018 ms
+2025-08-14 22:06:45.013 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /api/company/current responded 200 in 41.2899 ms
+2025-08-14 22:06:45.014 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP OPTIONS /api/structural-components/company/1 responded 204 in 0.0401 ms
+2025-08-14 22:06:45.074 -04:00 [INF] [WebsiteBuilderAPI.Controllers.StructuralComponentsController] Getting structural components for company 1
+2025-08-14 22:06:45.074 -04:00 [INF] [WebsiteBuilderAPI.Controllers.StructuralComponentsController] Returning structural components for company 1
+2025-08-14 22:06:45.074 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /api/structural-components/company/1 responded 200 in 0.6946 ms
+2025-08-14 22:06:45.076 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /api/company/current responded 200 in 1.6180 ms
+2025-08-14 22:06:45.116 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP OPTIONS /api/global-theme-config/company/1 responded 204 in 0.0334 ms
+2025-08-14 22:06:45.119 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /api/company/current responded 200 in 2.9654 ms
+2025-08-14 22:06:45.232 -04:00 [DBG] [WebsiteBuilderAPI.Services.GlobalThemeConfigService] Theme config retrieved from cache for company 1
+2025-08-14 22:06:45.233 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /api/global-theme-config/company/1 responded 200 in 0.8999 ms
+2025-08-14 22:06:50.971 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP OPTIONS /api/logs/frontend responded 204 in 0.0722 ms
+2025-08-14 22:06:51.005 -04:00 [INF] [WebsiteBuilderAPI.Controllers.LogsController] Frontend Log: Frontend logger initialized | Type: console | URL: http://localhost:3000/editor
+2025-08-14 22:06:51.005 -04:00 [WRN] [WebsiteBuilderAPI.Controllers.LogsController] Frontend Warning: ./src/components/ui/Button.tsx
+There are multiple modules with names that only differ in casing.
+This can lead to unexpected behavior when compiling on a filesystem with other case-semantic.
+Use equal casing. Compare these module identifiers:
+* javascript/auto|C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\compiled\@next\react-refresh-utils\dist\loader.js!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\build\webpack\loaders\next-flight-client-module-loader.js!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\build\webpack\loaders\next-swc-loader.js??ruleSet[1].rules[17].oneOf[5].use[1]!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\src\components\ui\Button.tsx|app-pages-browser
+    Used by 1 module(s), i. e.
+    javascript/auto|C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\compiled\@next\react-refresh-utils\dist\loader.js!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\build\webpack\loaders\next-flight-client-module-loader.js!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\build\webpack\loaders\next-swc-loader.js??ruleSet[1].rules[17].oneOf[5].use[1]!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\src\components\ui\ThemeCustomizer.tsx|app-pages-browser
+* javascript/auto|C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\compiled\@next\react-refresh-utils\dist\loader.js!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\build\webpack\loaders\next-flight-client-module-loader.js!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\build\webpack\loaders\next-swc-loader.js??ruleSet[1].rules[17].oneOf[5].use[1]!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\src\components\ui\button.tsx|app-pages-browser
+    Used by 1 module(s), i. e.
+    javascript/auto|C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\compiled\@next\react-refresh-utils\dist\loader.js!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\build\webpack\loaders\next-flight-client-module-loader.js!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\build\webpack\loaders\next-swc-loader.js??ruleSet[1].rules[17].oneOf[5].use[1]!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\src\components\editor\modules\Footer\FooterChildren.tsx|app-pages-browser | Type: console | URL: http://localhost:3000/editor
+2025-08-14 22:06:51.005 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP POST /api/logs/frontend responded 200 in 12.3406 ms
+2025-08-14 22:06:54.651 -04:00 [WRN] [WebsiteBuilderAPI.Controllers.LogsController] Frontend Warning: ./src/components/ui/Button.tsx
+There are multiple modules with names that only differ in casing.
+This can lead to unexpected behavior when compiling on a filesystem with other case-semantic.
+Use equal casing. Compare these module identifiers:
+* javascript/auto|C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\compiled\@next\react-refresh-utils\dist\loader.js!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\build\webpack\loaders\next-flight-client-module-loader.js!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\build\webpack\loaders\next-swc-loader.js??ruleSet[1].rules[17].oneOf[5].use[1]!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\src\components\ui\Button.tsx|app-pages-browser
+    Used by 1 module(s), i. e.
+    javascript/auto|C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\compiled\@next\react-refresh-utils\dist\loader.js!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\build\webpack\loaders\next-flight-client-module-loader.js!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\build\webpack\loaders\next-swc-loader.js??ruleSet[1].rules[17].oneOf[5].use[1]!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\src\components\ui\ThemeCustomizer.tsx|app-pages-browser
+* javascript/auto|C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\compiled\@next\react-refresh-utils\dist\loader.js!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\build\webpack\loaders\next-flight-client-module-loader.js!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\build\webpack\loaders\next-swc-loader.js??ruleSet[1].rules[17].oneOf[5].use[1]!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\src\components\ui\button.tsx|app-pages-browser
+    Used by 1 module(s), i. e.
+    javascript/auto|C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\compiled\@next\react-refresh-utils\dist\loader.js!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\build\webpack\loaders\next-flight-client-module-loader.js!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\build\webpack\loaders\next-swc-loader.js??ruleSet[1].rules[17].oneOf[5].use[1]!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\src\components\editor\modules\Footer\FooterChildren.tsx|app-pages-browser
+
+Import trace for requested module:
+./src/components/ui/Button.tsx
+./src/components/ui/ThemeCustomizer.tsx
+./src/components/layout/DashboardLayout.tsx | Type: console | URL: http://localhost:3000/editor
+2025-08-14 22:06:54.652 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP POST /api/logs/frontend responded 200 in 2.0390 ms
+2025-08-14 22:07:45.507 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP OPTIONS /api/logs/frontend responded 204 in 0.0547 ms
+2025-08-14 22:07:45.510 -04:00 [WRN] [WebsiteBuilderAPI.Controllers.LogsController] Frontend Warning: ./src/components/ui/Button.tsx
+There are multiple modules with names that only differ in casing.
+This can lead to unexpected behavior when compiling on a filesystem with other case-semantic.
+Use equal casing. Compare these module identifiers:
+* javascript/auto|C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\compiled\@next\react-refresh-utils\dist\loader.js!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\build\webpack\loaders\next-flight-client-module-loader.js!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\build\webpack\loaders\next-swc-loader.js??ruleSet[1].rules[17].oneOf[5].use[1]!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\src\components\ui\Button.tsx|app-pages-browser
+    Used by 1 module(s), i. e.
+    javascript/auto|C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\compiled\@next\react-refresh-utils\dist\loader.js!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\build\webpack\loaders\next-flight-client-module-loader.js!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\build\webpack\loaders\next-swc-loader.js??ruleSet[1].rules[17].oneOf[5].use[1]!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\src\components\ui\ThemeCustomizer.tsx|app-pages-browser
+* javascript/auto|C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\compiled\@next\react-refresh-utils\dist\loader.js!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\build\webpack\loaders\next-flight-client-module-loader.js!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\build\webpack\loaders\next-swc-loader.js??ruleSet[1].rules[17].oneOf[5].use[1]!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\src\components\ui\button.tsx|app-pages-browser
+    Used by 1 module(s), i. e.
+    javascript/auto|C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\compiled\@next\react-refresh-utils\dist\loader.js!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\build\webpack\loaders\next-flight-client-module-loader.js!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\node_modules\next\dist\build\webpack\loaders\next-swc-loader.js??ruleSet[1].rules[17].oneOf[5].use[1]!C:\Users\hp\Documents\Visual Studio 2022\Projects\WebsiteBuilderAPI\websitebuilder-admin\src\components\editor\modules\Footer\FooterChildren.tsx|app-pages-browser
+
+Import trace for requested module:
+./src/components/ui/Button.tsx
+./src/components/ui/ThemeCustomizer.tsx
+./src/components/layout/DashboardLayout.tsx | Type: console | URL: http://localhost:3000/editor
+2025-08-14 22:07:45.511 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP POST /api/logs/frontend responded 200 in 2.1146 ms
+2025-08-14 22:08:09.036 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP OPTIONS /api/NavigationMenu responded 204 in 0.0629 ms
+2025-08-14 22:08:09.074 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP OPTIONS /api/logs/frontend responded 204 in 0.0584 ms
+2025-08-14 22:08:09.087 -04:00 [INF] [WebsiteBuilderAPI.Controllers.LogsController] Frontend Log: Frontend logger initialized | Type: console | URL: http://localhost:3000/editor
+2025-08-14 22:08:09.088 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP POST /api/logs/frontend responded 200 in 9.4328 ms
+2025-08-14 22:08:09.313 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP OPTIONS /api/company/current responded 204 in 0.0586 ms
+2025-08-14 22:08:09.315 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP OPTIONS /api/company/current responded 204 in 0.0655 ms
+2025-08-14 22:08:09.331 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP OPTIONS /api/company/current responded 204 in 0.0475 ms
+2025-08-14 22:08:09.331 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP OPTIONS /api/auth/me responded 204 in 0.0240 ms
+2025-08-14 22:08:09.349 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP OPTIONS /api/company/current responded 204 in 0.0451 ms
+2025-08-14 22:08:09.350 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP OPTIONS /api/company/current responded 204 in 0.0244 ms
+2025-08-14 22:08:09.356 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /uploads/logos/eadfa918-afd9-4c06-97ad-2ff6ed6b62de.png responded 200 in 25.9379 ms
+2025-08-14 22:08:09.356 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP OPTIONS /api/auth/me responded 204 in 0.0429 ms
+2025-08-14 22:08:09.526 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /api/NavigationMenu responded 200 in 468.5743 ms
+2025-08-14 22:08:09.587 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /api/NavigationMenu responded 200 in 3.0603 ms
+2025-08-14 22:08:09.671 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /api/NavigationMenu/1/public responded 200 in 361.7740 ms
+2025-08-14 22:08:09.699 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /api/auth/me responded 200 in 321.2977 ms
+2025-08-14 22:08:09.811 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /api/NavigationMenu/1/public responded 200 in 19.2021 ms
+2025-08-14 22:08:09.821 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /api/company/current responded 200 in 444.5317 ms
+2025-08-14 22:08:09.834 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /api/auth/me responded 200 in 26.9866 ms
+2025-08-14 22:08:09.840 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /api/company/current responded 200 in 2.0441 ms
+2025-08-14 22:08:09.847 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /api/company/current responded 200 in 3.4669 ms
+2025-08-14 22:08:09.866 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /api/company/current responded 200 in 14.4760 ms
+2025-08-14 22:08:09.878 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /api/company/current responded 200 in 7.8813 ms
+2025-08-14 22:08:09.897 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP OPTIONS /api/structural-components/company/1 responded 204 in 0.0528 ms
+2025-08-14 22:08:09.902 -04:00 [INF] [WebsiteBuilderAPI.Controllers.StructuralComponentsController] Getting structural components for company 1
+2025-08-14 22:08:09.902 -04:00 [INF] [WebsiteBuilderAPI.Controllers.StructuralComponentsController] Returning structural components for company 1
+2025-08-14 22:08:09.903 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /api/structural-components/company/1 responded 200 in 3.1176 ms
+2025-08-14 22:08:09.948 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP OPTIONS /api/global-theme-config/company/1 responded 204 in 0.0892 ms
+2025-08-14 22:08:09.953 -04:00 [DBG] [WebsiteBuilderAPI.Services.GlobalThemeConfigService] Theme config retrieved from cache for company 1
+2025-08-14 22:08:09.953 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /api/global-theme-config/company/1 responded 200 in 0.8711 ms
+2025-08-14 22:08:14.061 -04:00 [INF] [WebsiteBuilderAPI.Controllers.LogsController] Frontend Log: Frontend logger initialized | Type: console | URL: http://localhost:3000/editor
+2025-08-14 22:08:14.061 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP POST /api/logs/frontend responded 200 in 2.4909 ms
+2025-08-14 22:10:22.380 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP OPTIONS /api/NavigationMenu responded 204 in 0.2345 ms
+2025-08-14 22:10:22.387 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP OPTIONS /api/logs/frontend responded 204 in 0.0482 ms
+2025-08-14 22:10:22.396 -04:00 [INF] [WebsiteBuilderAPI.Controllers.LogsController] Frontend Log: Frontend logger initialized | Type: console | URL: http://localhost:3000/editor
+2025-08-14 22:10:22.396 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP POST /api/logs/frontend responded 200 in 5.4227 ms
+2025-08-14 22:10:22.436 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /api/NavigationMenu responded 200 in 45.1008 ms
+2025-08-14 22:10:22.471 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /api/NavigationMenu responded 200 in 11.8200 ms
+2025-08-14 22:10:22.504 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /api/NavigationMenu/1/public responded 200 in 3.3387 ms
+2025-08-14 22:10:22.518 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /api/NavigationMenu/1/public responded 200 in 2.4823 ms
+2025-08-14 22:10:22.540 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP OPTIONS /api/company/current responded 204 in 0.0453 ms
+2025-08-14 22:10:22.541 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP OPTIONS /api/company/current responded 204 in 0.5049 ms
+2025-08-14 22:10:22.544 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP OPTIONS /api/company/current responded 204 in 0.0470 ms
+2025-08-14 22:10:22.547 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP OPTIONS /api/auth/me responded 204 in 0.0627 ms
+2025-08-14 22:10:22.547 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP OPTIONS /api/company/current responded 204 in 0.0442 ms
+2025-08-14 22:10:22.548 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP OPTIONS /api/company/current responded 204 in 0.0308 ms
+2025-08-14 22:10:22.548 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP OPTIONS /api/auth/me responded 204 in 0.0195 ms
+2025-08-14 22:10:22.556 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /api/company/current responded 200 in 2.5391 ms
+2025-08-14 22:10:22.579 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /api/auth/me responded 200 in 25.1021 ms
+2025-08-14 22:10:22.597 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /api/company/current responded 200 in 7.2236 ms
+2025-08-14 22:10:22.619 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /api/auth/me responded 200 in 25.4495 ms
+2025-08-14 22:10:22.652 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /api/company/current responded 200 in 20.2261 ms
+2025-08-14 22:10:22.708 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /api/company/current responded 200 in 16.2872 ms
+2025-08-14 22:10:22.720 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP OPTIONS /api/structural-components/company/1 responded 204 in 0.0554 ms
+2025-08-14 22:10:22.724 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /api/company/current responded 200 in 4.2987 ms
+2025-08-14 22:10:22.732 -04:00 [INF] [WebsiteBuilderAPI.Controllers.StructuralComponentsController] Getting structural components for company 1
+2025-08-14 22:10:22.732 -04:00 [INF] [WebsiteBuilderAPI.Controllers.StructuralComponentsController] Returning structural components for company 1
+2025-08-14 22:10:22.732 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /api/structural-components/company/1 responded 200 in 0.8829 ms
+2025-08-14 22:10:22.750 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP OPTIONS /api/global-theme-config/company/1 responded 204 in 0.0516 ms
+2025-08-14 22:10:22.753 -04:00 [DBG] [WebsiteBuilderAPI.Services.GlobalThemeConfigService] Theme config retrieved from cache for company 1
+2025-08-14 22:10:22.754 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP GET /api/global-theme-config/company/1 responded 200 in 0.8867 ms
+2025-08-14 22:10:27.397 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP OPTIONS /api/logs/frontend responded 204 in 0.0443 ms
+2025-08-14 22:10:27.403 -04:00 [INF] [WebsiteBuilderAPI.Controllers.LogsController] Frontend Log: Frontend logger initialized | Type: console | URL: http://localhost:3000/editor
+2025-08-14 22:10:27.445 -04:00 [INF] [Serilog.AspNetCore.RequestLoggingMiddleware] HTTP POST /api/logs/frontend responded 200 in 45.5527 ms
