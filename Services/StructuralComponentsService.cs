@@ -69,6 +69,22 @@ namespace WebsiteBuilderAPI.Services
         private const string DEFAULT_ANNOUNCEMENT = @"{""enabled"":true,""announcements"":[{""id"":""1"",""content"":""Free shipping on orders over $50!""}]}";
         private const string DEFAULT_FOOTER = @"{""enabled"":true,""sections"":[]}";
         private const string DEFAULT_CART = @"{""displayType"":""drawer"",""drawerPosition"":""right""}";
+        private const string DEFAULT_WHATSAPP_WIDGET = @"{
+            ""primaryColor"":""#22c55e"",
+            ""position"":""bottom-right"",
+            ""welcomeMessage"":""¡Hola! 👋 ¿En qué puedo ayudarte hoy?"",
+            ""placeholderText"":""Escribe un mensaje..."",
+            ""buttonSize"":""medium"",
+            ""borderRadius"":50,
+            ""showOnMobile"":true,
+            ""showOnDesktop"":true,
+            ""delaySeconds"":3,
+            ""autoOpenSeconds"":0,
+            ""isEnabled"":true,
+            ""requirementType"":""none"",
+            ""requirementTitle"":""Para continuar, por favor ingresa tu información:"",
+            ""requirementButtonText"":""Iniciar Chat""
+        }";
 
         public StructuralComponentsService(
             ApplicationDbContext context,
@@ -156,6 +172,7 @@ namespace WebsiteBuilderAPI.Services
                 "announcementbar" => settings.AnnouncementBarConfig,
                 "footer" => settings.FooterConfig,
                 "cartdrawer" => settings.CartDrawerConfig,
+                "whatsappwidget" => settings.WhatsAppWidgetConfig,
                 _ => null
             };
         }
@@ -171,6 +188,7 @@ namespace WebsiteBuilderAPI.Services
                 "announcementbar" => settings.AnnouncementBarConfig,
                 "footer" => settings.FooterConfig,
                 "cartdrawer" => settings.CartDrawerConfig,
+                "whatsappwidget" => settings.WhatsAppWidgetConfig,
                 _ => null
             };
         }
@@ -193,6 +211,7 @@ namespace WebsiteBuilderAPI.Services
                 existing.FooterConfig = dto.FooterConfig ?? existing.FooterConfig;
                 existing.ImageBannerConfig = dto.ImageBannerConfig ?? existing.ImageBannerConfig;
                 existing.CartDrawerConfig = dto.CartDrawerConfig ?? existing.CartDrawerConfig;
+                existing.WhatsAppWidgetConfig = dto.WhatsAppWidgetConfig ?? existing.WhatsAppWidgetConfig;
                 existing.Notes = dto.Notes ?? existing.Notes;
                 existing.UpdatedAt = DateTime.UtcNow;
                 existing.Version++;
@@ -225,6 +244,7 @@ namespace WebsiteBuilderAPI.Services
                     FooterConfig = dto.FooterConfig ?? DEFAULT_FOOTER,
                     ImageBannerConfig = dto.ImageBannerConfig ?? "{}",
                     CartDrawerConfig = dto.CartDrawerConfig ?? DEFAULT_CART,
+                    WhatsAppWidgetConfig = dto.WhatsAppWidgetConfig ?? DEFAULT_WHATSAPP_WIDGET,
                     Notes = dto.Notes,
                     IsActive = true,
                     CreatedAt = DateTime.UtcNow,
@@ -282,6 +302,9 @@ namespace WebsiteBuilderAPI.Services
                     break;
                 case "cartdrawer":
                     settings.CartDrawerConfig = dto.Config;
+                    break;
+                case "whatsappwidget":
+                    settings.WhatsAppWidgetConfig = dto.Config;
                     break;
                 default:
                     throw new ArgumentException($"Unknown component type: {dto.ComponentType}");
@@ -710,6 +733,7 @@ namespace WebsiteBuilderAPI.Services
                 FooterConfig = settings.FooterConfig,
                 ImageBannerConfig = settings.ImageBannerConfig,
                 CartDrawerConfig = settings.CartDrawerConfig,
+                WhatsAppWidgetConfig = settings.WhatsAppWidgetConfig,
                 IsActive = settings.IsActive,
                 IsPublished = settings.IsPublished,
                 PublishedAt = settings.PublishedAt,

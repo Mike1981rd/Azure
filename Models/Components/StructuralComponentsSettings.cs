@@ -46,6 +46,12 @@ namespace WebsiteBuilderAPI.Models.Components
         public string CartDrawerConfig { get; set; } = "{}";
 
         /// <summary>
+        /// WhatsApp widget configuration as JSONB
+        /// </summary>
+        [Column(TypeName = "jsonb")]
+        public string WhatsAppWidgetConfig { get; set; } = "{}";
+
+        /// <summary>
         /// Whether this configuration is currently active
         /// </summary>
         public bool IsActive { get; set; } = true;

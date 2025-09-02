@@ -14,6 +14,7 @@ namespace WebsiteBuilderAPI.DTOs
         public string FooterConfig { get; set; } = "{}";
         public string ImageBannerConfig { get; set; } = "{}";
         public string CartDrawerConfig { get; set; } = "{}";
+        public string WhatsAppWidgetConfig { get; set; } = "{}";
         public bool IsActive { get; set; }
         public bool IsPublished { get; set; }
         public DateTime? PublishedAt { get; set; }
@@ -33,6 +34,7 @@ namespace WebsiteBuilderAPI.DTOs
         public string? FooterConfig { get; set; }
         public string? ImageBannerConfig { get; set; }
         public string? CartDrawerConfig { get; set; }
+        public string? WhatsAppWidgetConfig { get; set; }
         public string? Notes { get; set; }
     }
 
@@ -41,7 +43,7 @@ namespace WebsiteBuilderAPI.DTOs
     /// </summary>
     public class UpdateComponentDto
     {
-        public string ComponentType { get; set; } = string.Empty; // header, announcementBar, footer, imageBanner, cartDrawer
+        public string ComponentType { get; set; } = string.Empty; // header, announcementBar, footer, imageBanner, cartDrawer, whatsAppWidget
         public string Config { get; set; } = "{}";
         public string? Notes { get; set; }
     }
