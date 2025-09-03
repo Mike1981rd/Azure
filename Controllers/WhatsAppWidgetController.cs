@@ -334,6 +334,9 @@ namespace WebsiteBuilderAPI.Controllers
 
                 await _context.SaveChangesAsync();
 
+                // Invalidate message cache for this conversation so Chat Room sees the new outbound immediately
+                try { Services.GreenApiWhatsAppService.InvalidateMessagesCache(companyId, conversation.Id); } catch { }
+
                 _logger.LogInformation("Response sent to widget conversation {ConversationId}", conversationId);
 
                 return Ok(new ApiResponse<object>
