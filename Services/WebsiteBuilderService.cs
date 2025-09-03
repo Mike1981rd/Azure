@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using WebsiteBuilderAPI.Data;
 using WebsiteBuilderAPI.DTOs;
@@ -19,15 +20,20 @@ namespace WebsiteBuilderAPI.Services
         private readonly ApplicationDbContext _context;
         private readonly ILogger<WebsiteBuilderService> _logger;
         private readonly IWebsiteBuilderCacheService _cacheService;
+        private readonly IConfiguration _configuration;
+        private readonly bool _autoGenerateSnapshots;
 
         public WebsiteBuilderService(
             ApplicationDbContext context,
             ILogger<WebsiteBuilderService> logger,
-            IWebsiteBuilderCacheService cacheService)
+            IWebsiteBuilderCacheService cacheService,
+            IConfiguration configuration)
         {
             _context = context;
             _logger = logger;
             _cacheService = cacheService;
+            _configuration = configuration;
+            _autoGenerateSnapshots = _configuration.GetValue<bool>("WebsiteBuilder:Snapshot:AutoGenerate", true);
         }
 
         #region Page Operations
@@ -129,10 +135,21 @@ namespace WebsiteBuilderAPI.Services
             // Invalidate cache
             await _cacheService.InvalidatePageCacheAsync(pageId);
             
-            // Generate snapshot if page is published (non-blocking)
-            if (page.IsPublished)
+            // Generate snapshot automatically if enabled (non-blocking)
+            if (_autoGenerateSnapshots)
             {
-                _ = Task.Run(async () => await GenerateSnapshotAsync(pageId, page.CompanyId));
+                _ = Task.Run(async () => 
+                {
+                    try
+                    {
+                        await GenerateSnapshotAsync(pageId, page.CompanyId);
+                        _logger.LogInformation("Auto-generated snapshot for page {PageId}", pageId);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to auto-generate snapshot for page {PageId}", pageId);
+                    }
+                });
             }
 
             _logger.LogInformation("Updated page {PageId}", pageId);
@@ -199,10 +216,21 @@ namespace WebsiteBuilderAPI.Services
             // Invalidate page cache so preview pulls fresh data
             await _cacheService.InvalidatePageCacheAsync(pageId);
             
-            // Generate snapshot if page is published (non-blocking)
-            if (page.IsPublished)
+            // Generate snapshot automatically if enabled (non-blocking)
+            if (_autoGenerateSnapshots)
             {
-                _ = Task.Run(async () => await GenerateSnapshotAsync(pageId, page.CompanyId));
+                _ = Task.Run(async () => 
+                {
+                    try
+                    {
+                        await GenerateSnapshotAsync(pageId, page.CompanyId);
+                        _logger.LogInformation("Auto-generated snapshot for page {PageId}", pageId);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to auto-generate snapshot for page {PageId}", pageId);
+                    }
+                });
             }
 
             return await GetPageByIdAsync(pageId);
@@ -1072,7 +1100,7 @@ namespace WebsiteBuilderAPI.Services
                         .ThenInclude(s => s.Children.OrderBy(c => c.SortOrder))
                     .FirstOrDefaultAsync(p => p.Id == pageId);
                     
-                if (page == null || !page.IsPublished) return;
+                if (page == null) return;
                 
                 // Check for existing snapshot
                 var existingSnapshot = await _context.PublishedSnapshots
