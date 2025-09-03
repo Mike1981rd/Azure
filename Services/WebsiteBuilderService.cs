@@ -34,6 +34,10 @@ namespace WebsiteBuilderAPI.Services
             _cacheService = cacheService;
             _configuration = configuration;
             _autoGenerateSnapshots = _configuration.GetValue<bool>("WebsiteBuilder:Snapshot:AutoGenerate", true);
+            
+            // Log initialization for debugging
+            _logger.LogInformation("[SNAPSHOT-INIT] WebsiteBuilderService initialized with AutoGenerateSnapshots: {AutoGenerate}", 
+                _autoGenerateSnapshots);
         }
 
         #region Page Operations

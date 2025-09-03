@@ -87,7 +87,32 @@ else
 fi
 
 echo ""
-echo "6. RESUMEN DE VALIDACIÓN"
+echo "6. PRUEBA DE ACTUALIZACIÓN (TRIGGER SNAPSHOT)"
+echo "---------------------------------------------"
+
+# Test: Actualizar una página para trigger snapshot
+echo "Actualizando página HOME para trigger snapshot..."
+UPDATE_RESPONSE=$(curl -s -X PUT \
+    -H "Content-Type: application/json" \
+    -H "Authorization: Bearer test-token" \
+    -d '{"name":"Home Updated","metaTitle":"Home - Test Update"}' \
+    "$API_URL/api/websitepages/1" 2>&1)
+
+echo "Response de actualización:"
+echo "$UPDATE_RESPONSE" | head -c 500
+echo ""
+
+echo ""
+echo "7. VERIFICAR LOGS DE SNAPSHOT"
+echo "-----------------------------"
+echo "Buscar en logs de Render por patrones:"
+echo "- [SNAPSHOT]"
+echo "- [DEBUG]"
+echo "- GenerateSnapshotAsync"
+echo ""
+
+echo ""
+echo "8. RESUMEN DE VALIDACIÓN"
 echo "------------------------"
 echo "Fecha: $(date)"
 echo "API URL: $API_URL"
