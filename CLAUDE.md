@@ -31,13 +31,16 @@
 
 ## 🎯 COMANDO /init-session
 Leer OBLIGATORIAMENTE:
-1. `.claude-rules-enforcement.md`
-2. `blueprint1.md` → 9 problemas críticos
-3. `blueprint2.md` → Arquitectura técnica
-4. `blueprint3.md` → UI/UX frontend
-5. `CLAUDEBK1.md` → Reglas base
-6. `CLAUDEBK2.md` → Patterns y troubleshooting
-7. `logs.md` → Sistema logging
+1. `CLAUDE.md` → Este archivo de configuración
+2. `docs/implementations/features/2025-01-live-preview.md` → Live Preview implementación
+3. `docs/WEBSITE-BUILDER-MODULE-GUIDE.md` → Guía módulos Website Builder
+4. `.claude-rules-enforcement.md`
+5. `blueprint1.md` → 9 problemas críticos
+6. `blueprint2.md` → Arquitectura técnica
+7. `blueprint3.md` → UI/UX frontend
+8. `CLAUDEBK1.md` → Reglas base
+9. `CLAUDEBK2.md` → Patterns y troubleshooting
+10. `logs.md` → Sistema logging
 
 ## 🏗️ COMANDO /init-websitebuilder
 Leer:

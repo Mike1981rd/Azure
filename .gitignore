@@ -166,3 +166,4 @@ Neon.md
 *.exe
 *.so
 *.dylib
+.claude/settings.local.json

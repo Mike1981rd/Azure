@@ -128,6 +128,12 @@ namespace WebsiteBuilderAPI.Services
 
             // Invalidate cache
             await _cacheService.InvalidatePageCacheAsync(pageId);
+            
+            // Generate snapshot if page is published (non-blocking)
+            if (page.IsPublished)
+            {
+                _ = Task.Run(async () => await GenerateSnapshotAsync(pageId, page.CompanyId));
+            }
 
             _logger.LogInformation("Updated page {PageId}", pageId);
 
@@ -192,6 +198,12 @@ namespace WebsiteBuilderAPI.Services
 
             // Invalidate page cache so preview pulls fresh data
             await _cacheService.InvalidatePageCacheAsync(pageId);
+            
+            // Generate snapshot if page is published (non-blocking)
+            if (page.IsPublished)
+            {
+                _ = Task.Run(async () => await GenerateSnapshotAsync(pageId, page.CompanyId));
+            }
 
             return await GetPageByIdAsync(pageId);
         }
@@ -316,6 +328,9 @@ namespace WebsiteBuilderAPI.Services
             // Clear production cache
             await _cacheService.InvalidatePageCacheAsync(pageId);
             await _cacheService.InvalidateCompanyCacheAsync(page.CompanyId);
+            
+            // Generate initial snapshot for published page
+            await GenerateSnapshotAsync(pageId, page.CompanyId);
 
             _logger.LogInformation("Published page {PageId}", pageId);
 
@@ -1042,6 +1057,93 @@ namespace WebsiteBuilderAPI.Services
                 CreatedAt = child.CreatedAt,
                 UpdatedAt = child.UpdatedAt
             };
+        }
+        
+        /// <summary>
+        /// Generates a snapshot of the page for stable production serving
+        /// </summary>
+        private async Task GenerateSnapshotAsync(int pageId, int companyId)
+        {
+            try
+            {
+                // Load complete page data
+                var page = await _context.WebsitePages
+                    .Include(p => p.Sections.OrderBy(s => s.SortOrder))
+                        .ThenInclude(s => s.Children.OrderBy(c => c.SortOrder))
+                    .FirstOrDefaultAsync(p => p.Id == pageId);
+                    
+                if (page == null || !page.IsPublished) return;
+                
+                // Check for existing snapshot
+                var existingSnapshot = await _context.PublishedSnapshots
+                    .Where(s => s.PageId == pageId && !s.IsStale)
+                    .OrderByDescending(s => s.Version)
+                    .FirstOrDefaultAsync();
+                    
+                // Mark old snapshots as stale
+                if (existingSnapshot != null)
+                {
+                    existingSnapshot.IsStale = true;
+                }
+                
+                // Create complete snapshot data
+                var snapshotData = new
+                {
+                    pageId = page.Id,
+                    companyId = page.CompanyId,
+                    pageType = page.PageType,
+                    name = page.Name,
+                    slug = page.Slug,
+                    metaTitle = page.MetaTitle,
+                    metaDescription = page.MetaDescription,
+                    sections = page.Sections.Select(s => new
+                    {
+                        id = s.Id,
+                        type = s.SectionType,
+                        config = s.Config,
+                        themeOverrides = s.ThemeOverrides,
+                        sortOrder = s.SortOrder,
+                        isActive = s.IsActive,
+                        title = s.Title,
+                        customCssClass = s.CustomCssClass,
+                        children = s.Children.Select(c => new
+                        {
+                            id = c.Id,
+                            blockType = c.BlockType,
+                            settings = c.Settings,
+                            sortOrder = c.SortOrder,
+                            isActive = c.IsActive,
+                            customCssClass = c.CustomCssClass
+                        })
+                    }),
+                    publishedAt = DateTime.UtcNow,
+                    version = (existingSnapshot?.Version ?? 0) + 1
+                };
+                
+                // Create new snapshot
+                var snapshot = new PublishedSnapshot
+                {
+                    CompanyId = companyId,
+                    PageId = pageId,
+                    PageSlug = page.Slug,
+                    PageType = page.PageType,
+                    SnapshotData = JsonSerializer.Serialize(snapshotData),
+                    Version = (existingSnapshot?.Version ?? 0) + 1,
+                    IsStale = false,
+                    PublishedAt = DateTime.UtcNow,
+                    CreatedAt = DateTime.UtcNow
+                };
+                
+                _context.PublishedSnapshots.Add(snapshot);
+                await _context.SaveChangesAsync();
+                
+                _logger.LogInformation("Generated snapshot v{Version} for page {PageId}", 
+                    snapshot.Version, pageId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to generate snapshot for page {PageId}", pageId);
+            }
         }
 
         #endregion
