@@ -12,13 +12,13 @@ SI VAS A DECIR "abre PowerShell..." → DETENTE → EJECUTA TÚ MISMO
 SI VAS A DECIR "necesitas ejecutar..." → DETENTE → EJECUTA TÚ MISMO
 
 EJEMPLOS:
-❌ INCORRECTO: "Abre PowerShell y ejecuta: railway login"
-✅ CORRECTO: Claude ejecuta: powershell.exe -Command "railway login"
+❌ INCORRECTO: "Abre PowerShell y ejecuta: dotnet run"
+✅ CORRECTO: Claude ejecuta: powershell.exe -Command "dotnet run"
 
 ❌ INCORRECTO: "Para iniciar sesión, ejecuta este comando..."
 ✅ CORRECTO: Claude ejecuta el comando directamente
 
-NOTA: Si el comando requiere interacción (como railway login), Claude EJECUTA EL COMANDO
+NOTA: Si el comando requiere interacción, Claude EJECUTA EL COMANDO
 y luego explica al usuario que debe completar la autenticación en el navegador que se abrió.
 </ENFORCE>
 
@@ -59,20 +59,125 @@ EJEMPLOS:
 NOTA: Esta regla es ABSOLUTA. GitHub CLI (gh) es la ÚNICA herramienta permitida para GitHub.
 </ENFORCE>
 
-## 📦 REPOSITORIOS DEL PROYECTO
+## 📦 REPOSITORIOS DEL PROYECTO (ACTUALIZADO)
 
 ### BACKEND (ASP.NET Core API):
 - **Ubicación local**: `/mnt/c/Users/hp/Documents/Visual Studio 2022/Projects/WebsiteBuilderAPI`
-- **Repositorio origin**: `Mike1981rd/nextjswebsite.git`
-- **Repositorio azure**: `Mike1981rd/Azure.git`
-- **Repositorio production**: `Mike1981rd/WebsiteBuilderAPI-Production.git`
-- **Rama principal**: `main`
+- Backend: `Mike1981rd/Render.git` (Render.com)
+- Frontend: `Mike1981rd/Vercel-Frontend.git` (Vercel)
+- **Rama para push**: `main` (SIEMPRE pushear a main en repositorio render)
+- **Estrategia**: Siempre hacer push a `render/main` para deploys
 
 ### FRONTEND (Next.js):
 - **Ubicación local**: `/mnt/c/Users/hp/Documents/Visual Studio 2022/Projects/WebsiteBuilderAPI/websitebuilder-admin`
-- **Repositorio origin**: `Mike1981rd/WebsiteBuilder-Frontend.git`
+- Repositorio origin: `Mike1981rd/Vercel-Frontend.git` (Vercel)
 - **Rama principal**: `main`
-- **Rama WhatsApp**: `whatsapp` (si existe)
+- Rama de trabajo actual: `whatsapp`
+- **Estrategia**: Trabajar en rama whatsapp, hacer merge a main cuando esté completo
+
+## 📝 GUÍA DE GITHUB - PROCEDIMIENTOS ESTÁNDAR
+
+### 🚀 BACKEND - Push a Render
+```bash
+# Siempre desde el directorio del backend
+cd /mnt/c/Users/hp/Documents/Visual Studio 2022/Projects/WebsiteBuilderAPI
+
+# 1. Verificar cambios
+git status
+
+# 2. Agregar cambios
+git add .
+
+# 3. Commit con mensaje descriptivo
+git commit -m "feat: descripción del cambio"
+
+# 4. Push SIEMPRE a render/main
+git push render main
+
+# NOTA: Si estás en otra rama, hacer merge a main primero
+git checkout main
+git merge tu-rama
+git push render main
+```
+
+### 🎨 FRONTEND - Trabajo en rama WhatsApp
+```bash
+# Siempre desde el directorio del frontend
+cd /mnt/c/Users/hp/Documents/Visual Studio 2022/Projects/WebsiteBuilderAPI/websitebuilder-admin
+
+# 1. Asegurarse de estar en la rama correcta
+git checkout whatsapp || git checkout -b whatsapp
+
+# 2. Verificar cambios
+git status
+
+# 3. Agregar cambios
+git add .
+
+# 4. Commit con mensaje descriptivo
+git commit -m "feat: descripción del cambio"
+
+# 5. Push a la rama WhatsApp
+git push origin whatsapp
+
+# CUANDO ESTÉ LISTO PARA PRODUCCIÓN:
+# Hacer merge a main
+git checkout main
+git merge whatsapp
+git push origin main
+```
+
+### ⚠️ REGLAS IMPORTANTES
+1. **Backend**: SIEMPRE push a `render/main` para que Render haga el deploy automático
+2. **Frontend**: Trabajar en `whatsapp` hasta completar el módulo de chat
+3. **NO usar** comandos git con remotes antiguos como "azure" - ahora es "render"
+4. **NO hacer** push directo a main en frontend mientras se trabaja en WhatsApp
+
+### 🔄 Verificar configuración de remotes
+```bash
+# Backend - debe mostrar render, origin, production
+git remote -v
+
+# Si falta render o apunta a URL incorrecta:
+git remote set-url render https://github.com/Mike1981rd/Render.git
+# O si no existe:
+git remote add render https://github.com/Mike1981rd/Render.git
+```
+
+## 🔑 CREDENCIALES DE SERVICIOS
+
+### 📦 GitHub
+- **Usuario**: Mike1981rd
+- Token: [NO VERSIONAR] (usar autenticación local o GH CLI)
+- Uso: nunca incluir tokens en remotes ni en archivos del repo
+
+### 🚀 Render
+- **Dashboard**: https://dashboard.render.com
+- **Servicio**: `websitebuilder-api-staging`
+- **URL API**: https://websitebuilder-api-staging.onrender.com
+- **Deploy**: Automático al push a `render/main`
+
+### ✅ Vercel
+- Token: [NO VERSIONAR]
+- **Proyecto**: `websitebuilder-admin`
+- **URL Producción**: https://websitebuilder-admin.vercel.app
+- **Deploy Command**:
+```bash
+npx vercel --prod --yes --token $VERCEL_TOKEN
+```
+
+### 🔮 Neon Database
+- **Host**: `ep-withered-paper-ad3yhgct.c-2.us-east-1.aws.neon.tech`
+- **Database**: `neondb`
+- **Username**: `neondb_owner`
+- **Password**: `npg_U1xrFkcz8PDC`
+- **Port**: 5432
+- **Project ID**: `proud-flower-27235934`
+- **Dashboard**: https://console.neon.tech/app/projects/proud-flower-27235934
+- **Connection String**:
+```
+Host=ep-withered-paper-ad3yhgct.c-2.us-east-1.aws.neon.tech;Port=5432;Database=neondb;Username=neondb_owner;Password=npg_U1xrFkcz8PDC;SSL Mode=Require;Trust Server Certificate=true;Timeout=30;Command Timeout=30;Pooling=true;MinPoolSize=5;MaxPoolSize=20
+```
 
 ## 🛑 REGLAS CRÍTICAS DE DESARROLLO - VIOLACIÓN = DETENCIÓN INMEDIATA
 
@@ -596,94 +701,6 @@ Antes de responder o ejecutar CUALQUIER comando, Claude debe verificar:
 
 ---
 
-## 🚂 RAILWAY - CONFIGURACIÓN Y CONEXIÓN EXITOSA (2025-08-28)
-
-<ENFORCE>
-RAILWAY ESTÁ FUNCIONANDO CON SUPABASE - NO CAMBIAR CONFIGURACIÓN SIN PERMISO
-</ENFORCE>
-
-### ✅ CONFIGURACIÓN ACTUAL FUNCIONAL
-
-**Proyecto Railway:**
-- **Nombre**: superb-stillness
-- **ID Proyecto**: def4e9c8-0104-4cb1-ad7b-0dc415887110
-- **Environment**: production
-- **Servicio**: WebsiteBuilderAPI-Production
-- **ID Servicio**: c2be9027-a4bc-4674-94e4-1090b78d6753
-- **URL**: https://websitebuilderapi-production-production.up.railway.app
-
-**Token Railway CLI:**
-```bash
-export RAILWAY_TOKEN=3752c685-6cfc-4d23-876b-6b543206212b
-```
-
-### 📊 BASE DE DATOS SUPABASE
-
-**Configuración Correcta:**
-- **Host**: aws-0-us-west-1.pooler.supabase.com
-- **Database**: postgres
-- **Username**: postgres.gvxqatvwkjmkvaslbevh
-- **Port**: 6543
-- **Service Role Key**: PcpBLRo5Mf5jBC4IQO_ineBHjVIj7npK9JhW5dJlUKI
-
-**Connection String (IMPORTANTE - Sin espacios en MinPoolSize/MaxPoolSize):**
-```
-Host=aws-0-us-west-1.pooler.supabase.com;Database=postgres;Username=postgres.gvxqatvwkjmkvaslbevh;Password=PcpBLRo5Mf5jBC4IQO_ineBHjVIj7npK9JhW5dJlUKI;Port=6543;Pooling=true;MinPoolSize=5;MaxPoolSize=20
-```
-
-### 🎯 COMANDOS RAILWAY FUNCIONALES
-
-**TODOS los comandos requieren especificar el servicio:**
-
-```bash
-# Ver variables
-railway variables --service c2be9027-a4bc-4674-94e4-1090b78d6753
-
-# Actualizar variable
-railway variables --service c2be9027-a4bc-4674-94e4-1090b78d6753 --set "KEY=value"
-
-# Deploy
-railway up --detach --service c2be9027-a4bc-4674-94e4-1090b78d6753
-
-# Redeploy
-railway redeploy --service c2be9027-a4bc-4674-94e4-1090b78d6753 -y
-
-# Ejecutar comando
-railway run --service c2be9027-a4bc-4674-94e4-1090b78d6753 [comando]
-```
-
-### ⚠️ PROBLEMAS RESUELTOS
-
-1. **Error "Min Pool Size"**: Npgsql requiere `MinPoolSize` sin espacios (no `Min Pool Size`)
-2. **Railway logs no funciona**: El token actual es Project Token, no soporta logs
-3. **Múltiples servicios**: Siempre especificar `--service` con el ID
-
-### 🔄 WORKFLOW PARA CAMBIOS
-
-1. **Modificar variable:**
-```bash
-export RAILWAY_TOKEN=3752c685-6cfc-4d23-876b-6b543206212b
-railway variables --service c2be9027-a4bc-4674-94e4-1090b78d6753 --set "ConnectionStrings__DefaultConnection=..."
-```
-
-2. **Reiniciar servicio:**
-```bash
-railway redeploy --service c2be9027-a4bc-4674-94e4-1090b78d6753 -y
-```
-
-3. **Verificar estado:**
-```bash
-curl -s https://websitebuilderapi-production-production.up.railway.app/api/health
-```
-
-### 📝 NOTAS IMPORTANTES
-
-- **NO CAMBIAR** el connection string sin revisar sintaxis de Npgsql
-- **NO USAR** `railway logs` - no funciona con Project Token
-- **SIEMPRE** incluir `--service` en comandos Railway
-- **Backend funciona** aunque health check muestre "degraded" (falso negativo)
-
----
 
 ## 📄 Guía de Implementación: Live Preview de Páginas (Editor → Preview Real)
 
@@ -906,7 +923,7 @@ const TEST_CREDENTIALS = {
 ```bash
 # CLAUDE DEBE EJECUTAR ESTO DIRECTAMENTE:
 cd /mnt/c/Users/hp/Documents/Visual\ Studio\ 2022/Projects/WebsiteBuilderAPI/websitebuilder-admin
-npx vercel --prod --yes --token wdnjcPrnirBnWbEXu1zZGIiR
+npx vercel --prod --yes --token $VERCEL_TOKEN
 ```
 
 **ALTERNATIVA CON POWERSHELL (si hay problemas con el comando directo):**
@@ -915,7 +932,7 @@ powershell.exe -Command "cd 'C:\Users\hp\Documents\Visual Studio 2022\Projects\W
 ```
 
 ### Configuración actual (NO MODIFICAR):
-- Token: `wdnjcPrnirBnWbEXu1zZGIiR`
+- Token: [NO VERSIONAR]
 - Proyecto: `websitebuilder-admin`
 - URL producción: https://websitebuilder-admin.vercel.app
 - API URL: `https://api.test1hotelwebsite.online/api` (configurada en todos los environments)

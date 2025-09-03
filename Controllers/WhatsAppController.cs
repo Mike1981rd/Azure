@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using Microsoft.EntityFrameworkCore;
 using WebsiteBuilderAPI.DTOs.Common;
 using WebsiteBuilderAPI.DTOs.WhatsApp;
 using WebsiteBuilderAPI.Services;
@@ -344,6 +345,72 @@ namespace WebsiteBuilderAPI.Controllers
                 // Use the active WhatsApp service based on provider
                 var activeService = GetActiveWhatsAppService();
                 var conversations = await activeService.GetConversationsAsync(companyId, filter);
+
+                // Enfoque robusto: enriquecer y asegurar que hilos 'widget' recientes siempre aparezcan
+                try
+                {
+                    var since = DateTime.UtcNow.AddDays(-14);
+                    using var scope = HttpContext.RequestServices.CreateScope();
+                    var db = scope.ServiceProvider.GetRequiredService<Data.ApplicationDbContext>();
+                    var widgetDb = db.Set<Models.WhatsAppConversation>()
+                        .AsNoTracking()
+                        .Where(c => c.CompanyId == companyId && (c.Source == "widget" || c.BusinessPhone == "widget"))
+                        .Where(c => (c.LastMessageAt ?? c.StartedAt) >= since)
+                        .OrderByDescending(c => c.LastMessageAt ?? c.StartedAt)
+                        .Take(pageSize * 2)
+                        .Select(c => new DTOs.WhatsApp.WhatsAppConversationDto
+                        {
+                            Id = c.Id,
+                            CustomerPhone = c.CustomerPhone,
+                            CustomerName = c.CustomerName,
+                            CustomerEmail = c.CustomerEmail,
+                            BusinessPhone = c.BusinessPhone,
+                            Status = c.Status,
+                            Priority = c.Priority,
+                            AssignedUserId = c.AssignedUserId,
+                            UnreadCount = c.UnreadCount,
+                            MessageCount = c.MessageCount,
+                            LastMessagePreview = c.LastMessagePreview,
+                            LastMessageAt = c.LastMessageAt,
+                            LastMessageSender = c.LastMessageSender,
+                            StartedAt = c.StartedAt,
+                            SessionId = c.SessionId,
+                            Source = c.Source,
+                            CompanyId = c.CompanyId
+                        })
+                        .ToList();
+
+                    // 1) Enriquecer existentes con campos del DB cuando falten
+                    if (conversations?.Conversations != null && conversations.Conversations.Count > 0)
+                    {
+                        var map = widgetDb.ToDictionary(x => x.Id, x => x);
+                        for (int i = 0; i < conversations.Conversations.Count; i++)
+                        {
+                            var cur = conversations.Conversations[i];
+                            if (cur == null) continue;
+                            if ((string.IsNullOrEmpty(cur.Source) || cur.Source == "whatsapp") && map.TryGetValue(cur.Id, out var w))
+                            {
+                                cur.Source = w.Source;
+                                cur.SessionId = w.SessionId;
+                                if (string.IsNullOrEmpty(cur.CustomerEmail)) cur.CustomerEmail = w.CustomerEmail;
+                                if (string.IsNullOrEmpty(cur.BusinessPhone)) cur.BusinessPhone = w.BusinessPhone;
+                            }
+                        }
+                    }
+
+                    // 2) Añadir hilos widget que no aparezcan en la lista del proveedor
+                    if (widgetDb.Count > 0)
+                    {
+                        var ids = new HashSet<Guid>(conversations.Conversations.Select(x => x.Id));
+                        var merged = conversations.Conversations.Concat(widgetDb.Where(w => !ids.Contains(w.Id)))
+                            .OrderByDescending(c => c.LastMessageAt ?? c.StartedAt)
+                            .ToList();
+                        conversations.Conversations = merged;
+                        conversations.TotalCount = merged.Count;
+                        conversations.TotalPages = (int)Math.Ceiling(conversations.TotalCount / (double)conversations.PageSize);
+                    }
+                }
+                catch { }
 
                 return Ok(new ApiResponse<WhatsAppConversationListDto>
                 {

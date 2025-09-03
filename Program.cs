@@ -481,12 +481,12 @@ try
         Log.Error(ex, "Failed to test database connection");
     }
 
-    // Seed data
-    using (var scope = app.Services.CreateScope())
-    {
-        var services = scope.ServiceProvider;
-        try
-        {
+            // Seed data
+            using (var scope = app.Services.CreateScope())
+            {
+                var services = scope.ServiceProvider;
+                try
+                {
             Log.Information("Initializing database with EF Core");
             var defaultConn = app.Configuration.GetConnectionString("DefaultConnection");
             var migrationsConn = app.Configuration["MIGRATIONS__DefaultConnection"];
@@ -515,14 +515,84 @@ try
                 dbContext.Database.Migrate();
             }
 
-            // SeedData.Initialize está comentado - el sistema ya tiene datos iniciales
-            // await SeedData.Initialize(services);
-            Log.Information("Database initialization completed successfully");
-        }
-        catch (Exception ex)
-        {
-            Log.Error(ex, "An error occurred while initializing the database");
-        }
+                    // SeedData.Initialize está comentado - el sistema ya tiene datos iniciales
+                    // await SeedData.Initialize(services);
+                    Log.Information("Database initialization completed successfully");
+
+                    // Ensure WhatsApp tables have required columns and sizes for widget/email workflow
+                    try
+                    {
+                        var conn = context.Database.GetDbConnection();
+                        await conn.OpenAsync();
+                        using (var cmd = conn.CreateCommand())
+                        {
+                            cmd.CommandText = @"
+DO $$
+BEGIN
+  -- Conversations: add columns if missing
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name='WhatsAppConversations' AND column_name='CustomerEmail'
+  ) THEN
+    ALTER TABLE public.""WhatsAppConversations"" ADD COLUMN ""CustomerEmail"" varchar(255);
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name='WhatsAppConversations' AND column_name='Source'
+  ) THEN
+    ALTER TABLE public.""WhatsAppConversations"" ADD COLUMN ""Source"" varchar(20) NOT NULL DEFAULT 'whatsapp';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name='WhatsAppConversations' AND column_name='SessionId'
+  ) THEN
+    ALTER TABLE public.""WhatsAppConversations"" ADD COLUMN ""SessionId"" varchar(100);
+  END IF;
+
+  -- Messages: widen From/To and add columns if missing
+  -- Widen types only if current length is smaller than 255
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name='WhatsAppMessages' AND column_name='From' AND character_maximum_length IS NOT NULL AND character_maximum_length < 255
+  ) THEN
+    ALTER TABLE public.""WhatsAppMessages"" ALTER COLUMN ""From"" TYPE varchar(255);
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name='WhatsAppMessages' AND column_name='To' AND character_maximum_length IS NOT NULL AND character_maximum_length < 255
+  ) THEN
+    ALTER TABLE public.""WhatsAppMessages"" ALTER COLUMN ""To"" TYPE varchar(255);
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name='WhatsAppMessages' AND column_name='Source'
+  ) THEN
+    ALTER TABLE public.""WhatsAppMessages"" ADD COLUMN ""Source"" varchar(20);
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name='WhatsAppMessages' AND column_name='SessionId'
+  ) THEN
+    ALTER TABLE public.""WhatsAppMessages"" ADD COLUMN ""SessionId"" varchar(100);
+  END IF;
+
+  -- Helpful indexes
+  CREATE INDEX IF NOT EXISTS ""IX_WhatsAppMessages_Source"" ON public.""WhatsAppMessages""(""Source"");
+  CREATE INDEX IF NOT EXISTS ""IX_WhatsAppMessages_SessionId"" ON public.""WhatsAppMessages""(""SessionId"");
+END $$;";
+                            await cmd.ExecuteNonQueryAsync();
+                        }
+                        Log.Information("Ensured WhatsApp schema columns and sizes are up to date");
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Warning(ex, "Failed to apply WhatsApp schema ensure DDL (non-fatal)");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(ex, "An error occurred while initializing the database");
+                }
     }
 
     Log.Information("🎯 WebsiteBuilder API started successfully on {Urls}", string.Join(", ", builder.WebHost.GetSetting("urls")?.Split(';') ?? ["http://localhost:5000"]));

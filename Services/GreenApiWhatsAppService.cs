@@ -662,17 +662,37 @@ namespace WebsiteBuilderAPI.Services
                     return new List<WhatsAppMessageDto>();
                 }
 
+                // LOG ESPECÍFICO: Ver valores exactos de la conversación
+                _logger.LogInformation("[WIDGET DEBUG] GetMessages for Conv {ConvId}: Source='{Source}', BusinessPhone='{BusinessPhone}', CustomerPhone='{CustomerPhone}', SessionId='{SessionId}'", 
+                    conversationId, 
+                    conversation.Source ?? "NULL",
+                    conversation.BusinessPhone ?? "NULL",
+                    conversation.CustomerPhone ?? "NULL",
+                    conversation.SessionId ?? "NULL");
+
                 // For widget-origin conversations, always serve from DB immediately and skip provider
                 if ((conversation.Source ?? string.Empty).Equals("widget", StringComparison.OrdinalIgnoreCase))
                 {
+                    _logger.LogInformation("[WIDGET DEBUG] Conversation {ConvId} IS A WIDGET - serving from DB directly", conversationId);
                     var widgetDb = await _context.WhatsAppMessages.AsNoTracking()
                         .Where(m => m.CompanyId == companyId && m.ConversationId == conversationId)
                         .OrderBy(m => m.Timestamp)
                         .Take(pageSize)
                         .ToListAsync();
                     var widgetDtos = widgetDb.Select(MapMessageToDto).ToList();
+                    _logger.LogInformation("[WIDGET DEBUG] Found {Count} messages in DB for widget conversation {ConvId}", widgetDtos.Count, conversationId);
+                    if (widgetDtos.Count > 0)
+                    {
+                        _logger.LogInformation("[WIDGET DEBUG] First message: Direction={Dir}, Body={Body}", 
+                            widgetDtos.First().Direction, 
+                            widgetDtos.First().Body?.Substring(0, Math.Min(50, widgetDtos.First().Body?.Length ?? 0)));
+                    }
                     _msgCache[(companyId, conversationId)] = (DateTime.UtcNow, widgetDtos);
                     return widgetDtos;
+                }
+                else
+                {
+                    _logger.LogInformation("[WIDGET DEBUG] Conversation {ConvId} is NOT a widget - will try Green API", conversationId);
                 }
 
                 // Quick DB read to avoid blocking UI while fetching from provider

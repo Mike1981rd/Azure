@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using WebsiteBuilderAPI.Data;
 using WebsiteBuilderAPI.DTOs.Common;
@@ -42,35 +44,75 @@ namespace WebsiteBuilderAPI.Controllers
                 var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
                 dto.IpAddress = ipAddress;
 
-                // Find or create conversation
-                var conversation = await _context.WhatsAppConversations
-                    .FirstOrDefaultAsync(c => c.SessionId == dto.SessionId && c.CompanyId == companyId);
+                // Build a stable widget key (fits in CustomerPhone 20 chars) derived from email/name/session
+                string widgetKey = BuildWidgetKey(dto);
+
+                // Find or create conversation (prefer email if provided, else session)
+                WhatsAppConversation? conversation = null;
+                if (!string.IsNullOrWhiteSpace(dto.CustomerEmail))
+                {
+                    conversation = await _context.WhatsAppConversations
+                        .FirstOrDefaultAsync(c => c.CompanyId == companyId 
+                                               && c.Source == "widget"
+                                               && c.CustomerEmail == dto.CustomerEmail);
+                }
+                if (conversation == null)
+                {
+                    conversation = await _context.WhatsAppConversations
+                        .FirstOrDefaultAsync(c => c.SessionId == dto.SessionId && c.CompanyId == companyId);
+                }
 
                 if (conversation == null)
                 {
-                    // Create new conversation for widget
-                    conversation = new WhatsAppConversation
+                    // Fallback to unique triple (CompanyId + CustomerPhone + BusinessPhone) to avoid unique index violation
+                    var visitorPhone = dto.CustomerPhone ?? "widget";
+                    var existingByTriple = await _context.WhatsAppConversations
+                        .FirstOrDefaultAsync(c => c.CompanyId == companyId && c.CustomerPhone == visitorPhone && c.BusinessPhone == "widget");
+
+                    if (existingByTriple != null)
                     {
-                        Id = Guid.NewGuid(),
-                        CustomerPhone = dto.CustomerPhone ?? "widget",  // Use simple "widget" for widget messages
+                        // Reuse existing conversation, DO NOT update sessionId to maintain consistency
+                        conversation = existingByTriple;
+                        // Keep the original SessionId - DO NOT UPDATE IT
+                        // conversation.SessionId = dto.SessionId; // REMOVED - this was causing the mismatch
+                        conversation.UnreadCount++;
+                        conversation.MessageCount++;
+                        conversation.LastMessagePreview = dto.Message.Length > 100 ? dto.Message.Substring(0, 100) + "..." : dto.Message;
+                        conversation.LastMessageAt = DateTime.UtcNow;
+                        conversation.LastMessageSender = "customer";
+                        conversation.UpdatedAt = DateTime.UtcNow;
+                        if (!string.IsNullOrEmpty(dto.CustomerName)) conversation.CustomerName = dto.CustomerName;
+                        if (!string.IsNullOrEmpty(dto.CustomerEmail)) conversation.CustomerEmail = dto.CustomerEmail;
+                        
+                        // IMPORTANT: Use the conversation's existing sessionId for the message, not the new one from dto
+                        dto.SessionId = conversation.SessionId; // Override dto to use existing sessionId
+                    }
+                    else
+                    {
+                        // Create new conversation for widget
+                        conversation = new WhatsAppConversation
+                        {
+                            Id = Guid.NewGuid(),
+                        CustomerPhone = widgetKey,  // stable key; DB unique index uses this
                         CustomerName = dto.CustomerName ?? "Website Visitor",
                         CustomerEmail = dto.CustomerEmail,
                         BusinessPhone = "widget", // Special identifier for widget conversations
-                        Status = "active",
-                        Priority = "normal",
-                        CompanyId = companyId,
-                        Source = "widget",
-                        SessionId = dto.SessionId,
-                        UnreadCount = 1,
-                        MessageCount = 1,
-                        LastMessagePreview = dto.Message.Length > 100 ? dto.Message.Substring(0, 100) + "..." : dto.Message,
-                        LastMessageAt = DateTime.UtcNow,
-                        LastMessageSender = "customer",
-                        CreatedAt = DateTime.UtcNow,
-                        UpdatedAt = DateTime.UtcNow
-                    };
+                            Status = "active",
+                            Priority = "normal",
+                            CompanyId = companyId,
+                            Source = "widget",
+                            SessionId = dto.SessionId,
+                            UnreadCount = 1,
+                            MessageCount = 1,
+                            LastMessagePreview = dto.Message.Length > 100 ? dto.Message.Substring(0, 100) + "..." : dto.Message,
+                            LastMessageAt = DateTime.UtcNow,
+                            LastMessageSender = "customer",
+                            CreatedAt = DateTime.UtcNow,
+                            UpdatedAt = DateTime.UtcNow
+                        };
 
-                    _context.WhatsAppConversations.Add(conversation);
+                        _context.WhatsAppConversations.Add(conversation);
+                    }
                 }
                 else
                 {
@@ -81,6 +123,14 @@ namespace WebsiteBuilderAPI.Controllers
                     conversation.LastMessageAt = DateTime.UtcNow;
                     conversation.LastMessageSender = "customer";
                     conversation.UpdatedAt = DateTime.UtcNow;
+
+                    // Re-open conversation if previously closed/archived when a new inbound arrives from widget
+                    if (!string.Equals(conversation.Status, "active", StringComparison.OrdinalIgnoreCase))
+                    {
+                        conversation.Status = "active";
+                        conversation.ClosedAt = null;
+                        conversation.ArchivedAt = null;
+                    }
                     
                     // Update customer info if provided
                     if (!string.IsNullOrEmpty(dto.CustomerName))
@@ -120,7 +170,7 @@ namespace WebsiteBuilderAPI.Controllers
                     TwilioSid = !string.IsNullOrWhiteSpace(dto.ClientMessageId)
                         ? dto.ClientMessageId!.Length > 100 ? dto.ClientMessageId!.Substring(0, 100) : dto.ClientMessageId!
                         : $"WDG{Guid.NewGuid().ToString("N").Substring(0, 12)}",  // Max 15 chars
-                    From = dto.CustomerPhone ?? "widget",  // Use simple "widget" for widget messages
+                    From = dto.CustomerEmail ?? dto.CustomerName ?? "widget",
                     To = "business",
                     Body = dto.Message,
                     MessageType = "text",
@@ -129,7 +179,7 @@ namespace WebsiteBuilderAPI.Controllers
                     ConversationId = conversation.Id,
                     CompanyId = companyId,
                     Source = "widget",
-                    SessionId = dto.SessionId,
+                    SessionId = conversation.SessionId, // Use conversation's sessionId, not dto's (might have been overridden)
                     Timestamp = DateTime.UtcNow,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow,
@@ -318,9 +368,12 @@ namespace WebsiteBuilderAPI.Controllers
             {
                 var companyId = GetCompanyId();
                 
+                // For the public widget polling, return ONLY outbound messages (agent → widget)
+                // This avoids duplicating customer messages that the client already renders locally
                 var query = _context.WhatsAppMessages
                     .Where(m => m.SessionId == sessionId && 
-                           m.CompanyId == companyId);  // Return all messages for the session
+                           m.CompanyId == companyId &&
+                           m.Direction == "outbound");
 
                 if (since.HasValue)
                 {
@@ -350,7 +403,9 @@ namespace WebsiteBuilderAPI.Controllers
                     {
                         id = m.Id,
                         body = m.Body,
-                        isFromMe = m.Direction == "outbound",
+                        // In widget UI, "me" is the visitor; but this endpoint returns only outbound (agent) messages
+                        // so mark them as not-from-me to render on the left.
+                        isFromMe = false,
                         timestamp = m.Timestamp,
                         status = m.Status,
                         agentName = agentName
@@ -462,9 +517,31 @@ namespace WebsiteBuilderAPI.Controllers
 
         private int GetCompanyId()
         {
-            // Try to get from subdomain or token
-            // For now, return default
+            // Single-tenant setup: always company 1
             return 1;
+        }
+
+        private static string BuildWidgetKey(WidgetMessageDto dto)
+        {
+            string basis = !string.IsNullOrWhiteSpace(dto.CustomerEmail)
+                ? (dto.CustomerEmail!.Trim().ToLowerInvariant())
+                : (!string.IsNullOrWhiteSpace(dto.CustomerName)
+                    ? dto.CustomerName!.Trim().ToLowerInvariant()
+                    : dto.SessionId);
+
+            try
+            {
+                using var md5 = MD5.Create();
+                var hash = md5.ComputeHash(Encoding.UTF8.GetBytes(basis));
+                var hex = Convert.ToHexString(hash).ToLowerInvariant();
+                return "wdg:" + hex.Substring(0, 12); // total length 16, fits under 20
+            }
+            catch
+            {
+                var clean = new string(basis.Where(char.IsLetterOrDigit).ToArray());
+                if (clean.Length > 16) clean = clean.Substring(0, 16);
+                return "wdg:" + clean;
+            }
         }
     }
 }

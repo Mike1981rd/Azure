@@ -316,7 +316,10 @@ CREATE TABLE IF NOT EXISTS public.""WhatsAppConversations"" (
   ""Id"" uuid PRIMARY KEY,
   ""CustomerPhone"" varchar(20) NOT NULL,
   ""CustomerName"" varchar(100),
+  ""CustomerEmail"" varchar(255),
   ""BusinessPhone"" varchar(20) NOT NULL,
+  ""Source"" varchar(20) NOT NULL DEFAULT 'whatsapp',
+  ""SessionId"" varchar(100),
   ""Status"" varchar(20) NOT NULL DEFAULT 'active',
   ""Priority"" varchar(10) NOT NULL DEFAULT 'normal',
   ""AssignedUserId"" integer REFERENCES public.""Users""(""Id"") ON DELETE SET NULL,
@@ -348,8 +351,8 @@ CREATE INDEX IF NOT EXISTS ""IX_WhatsAppConversations_UnreadCount"" ON public.""
 CREATE TABLE IF NOT EXISTS public.""WhatsAppMessages"" (
   ""Id"" uuid PRIMARY KEY,
   ""TwilioSid"" varchar(100) NOT NULL,
-  ""From"" varchar(20) NOT NULL,
-  ""To"" varchar(20) NOT NULL,
+  ""From"" varchar(255) NOT NULL,
+  ""To"" varchar(255) NOT NULL,
   ""Body"" varchar(4096),
   ""MessageType"" varchar(20) NOT NULL DEFAULT 'text',
   ""MediaUrl"" varchar(500),
@@ -362,6 +365,8 @@ CREATE TABLE IF NOT EXISTS public.""WhatsAppMessages"" (
   ""CompanyId"" integer NOT NULL REFERENCES public.""Companies""(""Id"") ON DELETE CASCADE,
   ""CustomerId"" integer REFERENCES public.""Customers""(""Id"") ON DELETE SET NULL,
   ""RepliedByUserId"" integer REFERENCES public.""Users""(""Id"") ON DELETE SET NULL,
+  ""Source"" varchar(20),
+  ""SessionId"" varchar(100),
   ""Timestamp"" timestamptz NOT NULL DEFAULT CURRENT_TIMESTAMP,
   ""DeliveredAt"" timestamptz,
   ""ReadAt"" timestamptz,
@@ -376,6 +381,8 @@ CREATE INDEX IF NOT EXISTS ""IX_WhatsAppMessages_RepliedByUserId"" ON public.""W
 CREATE INDEX IF NOT EXISTS ""IX_WhatsAppMessages_Direction"" ON public.""WhatsAppMessages""(""Direction"");
 CREATE INDEX IF NOT EXISTS ""IX_WhatsAppMessages_From"" ON public.""WhatsAppMessages""(""From"");
 CREATE INDEX IF NOT EXISTS ""IX_WhatsAppMessages_To"" ON public.""WhatsAppMessages""(""To"");
+CREATE INDEX IF NOT EXISTS ""IX_WhatsAppMessages_Source"" ON public.""WhatsAppMessages""(""Source"");
+CREATE INDEX IF NOT EXISTS ""IX_WhatsAppMessages_SessionId"" ON public.""WhatsAppMessages""(""SessionId"");
 CREATE INDEX IF NOT EXISTS ""IX_WhatsAppMessages_Status"" ON public.""WhatsAppMessages""(""Status"");
 CREATE INDEX IF NOT EXISTS ""IX_WhatsAppMessages_Timestamp"" ON public.""WhatsAppMessages""(""Timestamp"");
 CREATE INDEX IF NOT EXISTS ""IX_WhatsAppMessages_ReadPending"" ON public.""WhatsAppMessages""(""ReadAt"") WHERE ""ReadAt"" IS NULL AND ""Direction"" = 'inbound';

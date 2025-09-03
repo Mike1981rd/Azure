@@ -6,6 +6,11 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <!-- Avoid EXE apphost in Debug to prevent file lock issues during iterative builds -->
+  <PropertyGroup Condition="'$(Configuration)'=='Debug'">
+    <UseAppHost>false</UseAppHost>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="EFCore.NamingConventions" Version="8.0.3" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />

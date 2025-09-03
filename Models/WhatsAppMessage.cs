@@ -22,14 +22,14 @@ namespace WebsiteBuilderAPI.Models
         /// Phone number that sent the message (with country code)
         /// </summary>
         [Required]
-        [StringLength(20)]
+        [StringLength(255)]
         public string From { get; set; } = string.Empty;
 
         /// <summary>
         /// Phone number that received the message (business number)
         /// </summary>
         [Required]
-        [StringLength(20)]
+        [StringLength(255)]
         public string To { get; set; } = string.Empty;
 
         /// <summary>
