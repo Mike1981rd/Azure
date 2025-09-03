@@ -1068,7 +1068,9 @@ namespace WebsiteBuilderAPI.Services
             try
             {
                 // Fast path: if DB already has conversations, serve from DB (quick) and refresh in background
-                var dbBase = _context.Set<WhatsAppConversation>().Where(c => c.CompanyId == companyId);
+                // Also filter out invalid phone numbers like "+0"
+                var dbBase = _context.Set<WhatsAppConversation>()
+                    .Where(c => c.CompanyId == companyId && c.CustomerPhone != "+0" && c.CustomerPhone != "0");
                 var dbHas = await dbBase.AnyAsync();
                 if (dbHas)
                 {
@@ -1080,12 +1082,39 @@ namespace WebsiteBuilderAPI.Services
                     if (!string.IsNullOrWhiteSpace(filter.Status))
                         dbQuery = dbQuery.Where(c => c.Status == filter.Status);
 
-                    var totalDb = await dbQuery.CountAsync();
-                    var pageDb = await dbQuery
+                    // Check for and clean duplicates before returning
+                    var allConversations = await dbQuery.ToListAsync();
+                    var duplicateGroups = allConversations
+                        .GroupBy(c => c.CustomerPhone)
+                        .Where(g => g.Count() > 1)
+                        .ToList();
+                    
+                    if (duplicateGroups.Any())
+                    {
+                        _logger.LogWarning("[WHATSAPP-DEDUP] Found duplicate conversations in DB, cleaning up...");
+                        foreach (var group in duplicateGroups)
+                        {
+                            var duplicates = group.OrderByDescending(c => c.LastMessageAt ?? c.UpdatedAt).ToList();
+                            var toKeep = duplicates.First();
+                            var toRemove = duplicates.Skip(1).ToList();
+                            
+                            _logger.LogWarning("[WHATSAPP-DEDUP] Phone {Phone} has {Count} duplicates. Keeping ID: {KeepId}, Removing IDs: {RemoveIds}", 
+                                group.Key, group.Count(), toKeep.Id, string.Join(", ", toRemove.Select(c => c.Id)));
+                            
+                            _context.Set<WhatsAppConversation>().RemoveRange(toRemove);
+                        }
+                        await _context.SaveChangesAsync();
+                        
+                        // Refresh the list after cleanup
+                        allConversations = await dbQuery.ToListAsync();
+                    }
+                    
+                    var totalDb = allConversations.Count;
+                    var pageDb = allConversations
                         .OrderByDescending(c => c.LastMessageAt ?? c.StartedAt)
                         .Skip((filter.Page - 1) * filter.PageSize)
                         .Take(filter.PageSize)
-                        .ToListAsync();
+                        .ToList();
 
                     var dtoDb = pageDb.Select(c => {
                         CustomerProfileDto? profile = null;
@@ -1116,6 +1145,12 @@ namespace WebsiteBuilderAPI.Services
                             CustomerProfile = profile
                         };
                     }).ToList();
+                    
+                    _logger.LogInformation("[WHATSAPP-DEDUP] Returning {Count} conversations from DB for company {CompanyId}", dtoDb.Count, companyId);
+                    foreach (var conv in dtoDb)
+                    {
+                        _logger.LogDebug("[WHATSAPP-DEDUP] Conv: Id={Id}, Phone={Phone}, Name={Name}", conv.Id, conv.CustomerPhone, conv.CustomerName);
+                    }
 
                     // Background refresh (ignore result). Avoid using scoped DbContext on background thread.
                     var cfgSnapshot = await GetGreenApiConfigAsync(companyId);
@@ -1615,24 +1650,50 @@ namespace WebsiteBuilderAPI.Services
                 }
                 
                 var baseUrl = _settings.GreenAPI?.ApiBaseUrl ?? "https://api.green-api.com";
-                var url = $"{baseUrl}/waInstance{config.GreenApiInstanceId}/getChats/{apiToken}";
+                // Try to use LastIncomingMessages first to get chats with timestamps
+                var url = $"{baseUrl}/waInstance{config.GreenApiInstanceId}/lastIncomingMessages/{apiToken}?minutes=10080"; // 7 days
                 
                 var response = await _httpClient.GetAsync(url);
                 var content = await response.Content.ReadAsStringAsync();
                 
-                _logger.LogDebug("GreenAPI getChats response (truncated): {Content}", content?.Length > 500 ? content.Substring(0, 500) + "..." : content);
+                _logger.LogDebug("GreenAPI lastIncomingMessages response (truncated): {Content}", content?.Length > 500 ? content.Substring(0, 500) + "..." : content);
                 
                 if (response.IsSuccessStatusCode)
                 {
                     // Parse as JsonElement array for dynamic handling
                     var jsonResponse = System.Text.Json.JsonSerializer.Deserialize<JsonElement>(content);
                     var chatsList = new List<dynamic>();
+                    var chatsMap = new Dictionary<string, JsonElement>();
                     
                     if (jsonResponse.ValueKind == JsonValueKind.Array)
                     {
-                        foreach (var item in jsonResponse.EnumerateArray())
+                        _logger.LogInformation("[WHATSAPP-DEDUP] Processing {Count} messages from lastIncomingMessages", jsonResponse.GetArrayLength());
+                        
+                        // lastIncomingMessages returns messages, group by chatId
+                        foreach (var message in jsonResponse.EnumerateArray())
                         {
-                            chatsList.Add(item);
+                            if (message.TryGetProperty("chatId", out var chatIdElem))
+                            {
+                                var chatId = chatIdElem.GetString();
+                                if (!string.IsNullOrEmpty(chatId) && !chatsMap.ContainsKey(chatId))
+                                {
+                                    // Store the first (most recent) message for each chat
+                                    chatsMap[chatId] = message;
+                                    _logger.LogDebug("[WHATSAPP-DEDUP] Added chat {ChatId} to map", chatId);
+                                }
+                                else if (!string.IsNullOrEmpty(chatId))
+                                {
+                                    _logger.LogDebug("[WHATSAPP-DEDUP] Skipped duplicate chat {ChatId}", chatId);
+                                }
+                            }
+                        }
+                        
+                        _logger.LogInformation("[WHATSAPP-DEDUP] Grouped to {Count} unique chats from {Total} messages", chatsMap.Count, jsonResponse.GetArrayLength());
+                        
+                        // Convert to chat list with timestamp from message
+                        foreach (var kvp in chatsMap)
+                        {
+                            chatsList.Add(kvp.Value);
                         }
                     }
                     
@@ -1704,15 +1765,28 @@ namespace WebsiteBuilderAPI.Services
                 
                 // Log at debug level to avoid noisy logs and overhead
                 var chatStr = chatObj.ToString();
-                _logger.LogDebug("Converting GreenAPI chat (truncated): {Chat}", chatStr.Length > 300 ? chatStr.Substring(0, 300) + "..." : chatStr);
+                _logger.LogInformation("[WHATSAPP-TIMESTAMP] Converting GreenAPI message/chat: {Chat}", chatStr.Length > 500 ? chatStr.Substring(0, 500) + "..." : chatStr);
                 
-                // Extract chat ID and phone number
-                var chatId = chatObj.GetProperty("id").GetString() ?? "";
+                // Extract chat ID and phone number - handle both old format (id) and new format (chatId)
+                string? chatId = null;
+                if (chatObj.TryGetProperty("chatId", out var chatIdElem))
+                {
+                    chatId = chatIdElem.GetString();
+                }
+                else if (chatObj.TryGetProperty("id", out var idElem))
+                {
+                    chatId = idElem.GetString();
+                }
                 
-                // Skip empty chat IDs
                 if (string.IsNullOrEmpty(chatId))
                 {
-                    _logger.LogDebug("Skipping chat with empty ID");
+                    chatId = "";
+                }
+                
+                // Skip empty or invalid chat IDs (including system messages)
+                if (string.IsNullOrEmpty(chatId) || chatId == "0@c.us" || chatId == "0")
+                {
+                    _logger.LogDebug("Skipping chat with invalid ID: {ChatId}", chatId);
                     return null;
                 }
                 
@@ -1722,7 +1796,72 @@ namespace WebsiteBuilderAPI.Services
                 var contactName = phoneNumber;
                 string? avatarUrl = null;
                 var lastMessageText = "Click para ver mensajes"; // Default text
-                DateTime? lastMessageTime = DateTime.UtcNow.AddMinutes(-30); // Default time
+                
+                // Try to extract message text from lastIncomingMessages format
+                if (chatObj.TryGetProperty("textMessage", out var textElem))
+                {
+                    lastMessageText = textElem.GetString() ?? "Click para ver mensajes";
+                    if (lastMessageText.Length > 100)
+                    {
+                        lastMessageText = lastMessageText.Substring(0, 100) + "...";
+                    }
+                }
+                
+                DateTime? lastMessageTime = null;
+                
+                // Try to extract timestamp from Green API message/chat object
+                try
+                {
+                    // For lastIncomingMessages, the object IS a message with timestamp
+                    if (chatObj.TryGetProperty("timestamp", out var timestampElem))
+                    {
+                        if (timestampElem.ValueKind == JsonValueKind.Number)
+                        {
+                            var unixTime = timestampElem.GetInt64();
+                            // Green API uses Unix seconds based on message processing code
+                            lastMessageTime = DateTimeOffset.FromUnixTimeSeconds(unixTime).UtcDateTime;
+                            _logger.LogInformation("[WHATSAPP-TIMESTAMP] Found timestamp field: Unix={Unix}, Converted={Time}", unixTime, lastMessageTime);
+                        }
+                    }
+                    else if (chatObj.TryGetProperty("time", out var timeElem))
+                    {
+                        if (timeElem.ValueKind == JsonValueKind.Number)
+                        {
+                            var unixTime = timeElem.GetInt64();
+                            lastMessageTime = DateTimeOffset.FromUnixTimeSeconds(unixTime).UtcDateTime;
+                            _logger.LogInformation("[WHATSAPP-TIMESTAMP] Found time field: Unix={Unix}, Converted={Time}", unixTime, lastMessageTime);
+                        }
+                    }
+                    // Try to get from lastMessage object if present
+                    else if (chatObj.TryGetProperty("lastMessage", out var lastMsgObj))
+                    {
+                        if (lastMsgObj.TryGetProperty("timestamp", out var msgTimestampElem))
+                        {
+                            if (msgTimestampElem.ValueKind == JsonValueKind.Number)
+                            {
+                                var unixTime = msgTimestampElem.GetInt64();
+                                lastMessageTime = DateTimeOffset.FromUnixTimeSeconds(unixTime).UtcDateTime;
+                                _logger.LogInformation("[WHATSAPP-TIMESTAMP] Found lastMessage.timestamp: Unix={Unix}, Converted={Time}", unixTime, lastMessageTime);
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Could not parse timestamp from Green API chat");
+                }
+                
+                // Fallback to default time if no timestamp found
+                if (!lastMessageTime.HasValue)
+                {
+                    lastMessageTime = DateTime.UtcNow.AddMinutes(-30);
+                    _logger.LogWarning("[WHATSAPP-TIMESTAMP] No timestamp found in chat object for {ChatId}, using fallback: {Time}", chatId, lastMessageTime);
+                }
+                else
+                {
+                    _logger.LogInformation("[WHATSAPP-TIMESTAMP] Final timestamp for {ChatId}: {Time}", chatId, lastMessageTime);
+                }
+                
                 var unreadCount = 0;
                 
                 // Create customer profile if we have additional info
@@ -1737,12 +1876,46 @@ namespace WebsiteBuilderAPI.Services
                 }
                 
                 // Ensure conversation persisted (stable Id)
-                var existing = await _context.Set<WhatsAppConversation>()
-                    .FirstOrDefaultAsync(c => c.CompanyId == companyId 
-                        && c.CustomerPhone == phoneNumber 
-                        && c.BusinessPhone == config.WhatsAppPhoneNumber);
+                // Log para depuración de duplicados
+                _logger.LogInformation("[WHATSAPP-DEDUP] Checking for existing conversation: Company={CompanyId}, Phone={Phone}, BusinessPhone={BusinessPhone}", 
+                    companyId, phoneNumber, config.WhatsAppPhoneNumber);
+                
+                // Verificar si ya existe una conversación, ignorando BusinessPhone si está vacío
+                var existingConversations = await _context.Set<WhatsAppConversation>()
+                    .Where(c => c.CompanyId == companyId && c.CustomerPhone == phoneNumber)
+                    .ToListAsync();
+                    
+                if (existingConversations.Count > 1)
+                {
+                    _logger.LogWarning("[WHATSAPP-DEDUP] Found {Count} duplicate conversations for {Phone}! IDs: {Ids}", 
+                        existingConversations.Count, phoneNumber, 
+                        string.Join(", ", existingConversations.Select(c => c.Id)));
+                    
+                    // Clean up duplicates - keep the one with most recent activity
+                    var toKeep = existingConversations
+                        .OrderByDescending(c => c.LastMessageAt ?? c.UpdatedAt)
+                        .First();
+                    
+                    var toRemove = existingConversations.Where(c => c.Id != toKeep.Id).ToList();
+                    
+                    if (toRemove.Any())
+                    {
+                        _logger.LogWarning("[WHATSAPP-DEDUP] Removing {Count} duplicate conversations, keeping ID: {KeepId}", 
+                            toRemove.Count, toKeep.Id);
+                        _context.Set<WhatsAppConversation>().RemoveRange(toRemove);
+                        await _context.SaveChangesAsync();
+                    }
+                    
+                    existingConversations = new List<WhatsAppConversation> { toKeep };
+                }
+                
+                // Use the first one or match by business phone
+                var existing = existingConversations.FirstOrDefault(c => c.BusinessPhone == config.WhatsAppPhoneNumber) 
+                    ?? existingConversations.FirstOrDefault();
 
                 var created = false;
+                var needsUpdate = false;
+                
                 if (existing == null)
                 {
                     existing = new WhatsAppConversation
@@ -1752,17 +1925,48 @@ namespace WebsiteBuilderAPI.Services
                         CustomerName = contactName,
                         BusinessPhone = config.WhatsAppPhoneNumber,
                         Status = "active",
-                        StartedAt = DateTime.UtcNow,
+                        StartedAt = lastMessageTime ?? DateTime.UtcNow,
+                        LastMessageAt = lastMessageTime,
                         CreatedAt = DateTime.UtcNow,
                         UpdatedAt = DateTime.UtcNow
                     };
                     _context.Set<WhatsAppConversation>().Add(existing);
                     created = true;
                 }
+                else
+                {
+                    // Update LastMessageAt if we have a more recent timestamp
+                    // TEMPORARY FIX: Force update if timestamp is from a real message (not fallback)
+                    if (lastMessageTime.HasValue)
+                    {
+                        var isFallbackTime = lastMessageTime.Value > DateTime.UtcNow.AddMinutes(-35) && 
+                                           lastMessageTime.Value < DateTime.UtcNow.AddMinutes(-25);
+                        
+                        // Force update if new timestamp is NOT a fallback and existing IS a fallback
+                        var shouldForceUpdate = !isFallbackTime && existing.LastMessageAt.HasValue &&
+                                              existing.LastMessageAt.Value > DateTime.UtcNow.AddHours(-1);
+                        
+                        if (!existing.LastMessageAt.HasValue || 
+                            lastMessageTime.Value > existing.LastMessageAt.Value ||
+                            shouldForceUpdate)
+                        {
+                            var oldTimestamp = existing.LastMessageAt;
+                            _logger.LogInformation("[WHATSAPP-TIMESTAMP] Updating DB LastMessageAt for {Phone}: Old={Old}, New={New} (Forced={Forced})", 
+                                phoneNumber, oldTimestamp, lastMessageTime, shouldForceUpdate);
+                            existing.LastMessageAt = lastMessageTime;
+                            existing.UpdatedAt = DateTime.UtcNow;
+                            needsUpdate = true;
+                        }
+                        else
+                        {
+                            _logger.LogDebug("[WHATSAPP-TIMESTAMP] Not updating {Phone}: Existing={Existing} >= New={New}", 
+                                phoneNumber, existing.LastMessageAt, lastMessageTime);
+                        }
+                    }
+                }
 
-                // Avoid per-chat updates/writes to speed up initial loads.
-                // Only save when we created a new conversation to guarantee a stable Id.
-                if (created)
+                // Save when we created a new conversation or need to update timestamp
+                if (created || needsUpdate)
                 {
                     try
                     {
@@ -1770,10 +1974,16 @@ namespace WebsiteBuilderAPI.Services
                     }
                     catch (Exception saveEx)
                     {
-                        _logger.LogWarning(saveEx, "Failed to persist new conversation for {Phone}", phoneNumber);
+                        _logger.LogWarning(saveEx, "Failed to persist conversation for {Phone}", phoneNumber);
                     }
                 }
 
+                // Update LastMessagePreview if we have fresh text
+                if (!string.IsNullOrEmpty(lastMessageText) && lastMessageText != "Click para ver mensajes")
+                {
+                    existing.LastMessagePreview = lastMessageText;
+                }
+                
                 return new WhatsAppConversationDto
                 {
                     Id = existing.Id,
@@ -1784,7 +1994,7 @@ namespace WebsiteBuilderAPI.Services
                     Priority = "normal",
                     UnreadCount = existing.UnreadCount,
                     MessageCount = existing.MessageCount,
-                    LastMessagePreview = existing.LastMessagePreview,
+                    LastMessagePreview = existing.LastMessagePreview ?? lastMessageText,
                     CustomerProfile = customerProfile,
                     LastMessageAt = existing.LastMessageAt,
                     CreatedAt = existing.CreatedAt,
@@ -1969,6 +2179,7 @@ namespace WebsiteBuilderAPI.Services
             // For testing, we don't require IsActive to be true
             // Also check for both "GreenAPI" and "GreenApi" variations
             _logger.LogInformation("Looking for GreenAPI config for company {CompanyId}", companyId);
+            
             
             var configs = await _context.WhatsAppConfigs
                 .Where(c => c.CompanyId == companyId)
