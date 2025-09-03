@@ -1,9 +1,12 @@
 using System;
+using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
+using WebsiteBuilderAPI.Data;
 
 namespace WebsiteBuilderAPI.Services
 {
@@ -16,6 +19,7 @@ namespace WebsiteBuilderAPI.Services
         private readonly IMemoryCache _memoryCache;
         private readonly IDistributedCache _distributedCache;
         private readonly ILogger<WebsiteBuilderCacheService> _logger;
+        private readonly ApplicationDbContext _context;
 
         // Cache key prefixes
         private const string PREVIEW_PREFIX = "preview:";
@@ -34,11 +38,13 @@ namespace WebsiteBuilderAPI.Services
         public WebsiteBuilderCacheService(
             IMemoryCache memoryCache,
             IDistributedCache distributedCache,
-            ILogger<WebsiteBuilderCacheService> logger)
+            ILogger<WebsiteBuilderCacheService> logger,
+            ApplicationDbContext context)
         {
             _memoryCache = memoryCache;
             _distributedCache = distributedCache;
             _logger = logger;
+            _context = context;
         }
 
         #region Page Cache Operations
@@ -91,6 +97,21 @@ namespace WebsiteBuilderAPI.Services
 
         public async Task<string?> GetPageProductionAsync(int pageId)
         {
+            // First try to get from snapshot
+            var snapshot = await _context.PublishedSnapshots
+                .Where(s => s.PageId == pageId && !s.IsStale)
+                .OrderByDescending(s => s.Version)
+                .Select(s => s.SnapshotData)
+                .FirstOrDefaultAsync();
+                
+            if (snapshot != null)
+            {
+                _cacheHits++;
+                _logger.LogDebug("Snapshot hit for page {PageId}", pageId);
+                return snapshot;
+            }
+            
+            // Fallback to original cache logic
             var key = $"{PRODUCTION_PREFIX}{pageId}";
             
             // Try memory cache first
@@ -114,6 +135,39 @@ namespace WebsiteBuilderAPI.Services
 
             _cacheMisses++;
             _logger.LogDebug("Production cache miss for page {PageId}", pageId);
+            return null;
+        }
+        
+        public async Task<string?> GetPageProductionBySlugAsync(int companyId, string slug)
+        {
+            var cacheKey = $"{PRODUCTION_PREFIX}company:{companyId}:slug:{slug}";
+            
+            // Try memory cache first
+            if (_memoryCache.TryGetValue(cacheKey, out string? cachedContent))
+            {
+                _cacheHits++;
+                _logger.LogDebug("Production cache hit for company {CompanyId} slug {Slug}", companyId, slug);
+                return cachedContent;
+            }
+            
+            // Try to get from snapshot database
+            var snapshot = await _context.PublishedSnapshots
+                .Where(s => s.CompanyId == companyId && s.PageSlug == slug && !s.IsStale)
+                .OrderByDescending(s => s.Version)
+                .Select(s => s.SnapshotData)
+                .FirstOrDefaultAsync();
+                
+            if (snapshot != null)
+            {
+                // Cache the snapshot data for faster access
+                _memoryCache.Set(cacheKey, snapshot, _productionCacheDuration);
+                _cacheHits++;
+                _logger.LogDebug("Snapshot hit for company {CompanyId} slug {Slug}", companyId, slug);
+                return snapshot;
+            }
+            
+            _cacheMisses++;
+            _logger.LogDebug("Production cache/snapshot miss for company {CompanyId} slug {Slug}", companyId, slug);
             return null;
         }
 

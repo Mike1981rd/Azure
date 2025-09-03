@@ -3066,6 +3066,60 @@ namespace WebsiteBuilderAPI.Migrations
                     b.ToTable("ProductVariants");
                 });
 
+            modelBuilder.Entity("WebsiteBuilderAPI.Models.PublishedSnapshot", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CompanyId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<bool>("IsStale")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("PageId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("PageSlug")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("PageType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime>("PublishedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("SnapshotData")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PageId", "Version")
+                        .HasDatabaseName("IX_PublishedSnapshots_Version");
+
+                    b.HasIndex("CompanyId", "PageSlug", "IsStale")
+                        .HasDatabaseName("IX_PublishedSnapshots_Lookup");
+
+                    b.ToTable("PublishedSnapshots");
+                });
+
             modelBuilder.Entity("WebsiteBuilderAPI.Models.Reservation", b =>
                 {
                     b.Property<int>("Id")
@@ -5195,6 +5249,25 @@ namespace WebsiteBuilderAPI.Migrations
                         .IsRequired();
 
                     b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("WebsiteBuilderAPI.Models.PublishedSnapshot", b =>
+                {
+                    b.HasOne("WebsiteBuilderAPI.Models.Company", "Company")
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("WebsiteBuilderAPI.Models.WebsitePage", "Page")
+                        .WithMany()
+                        .HasForeignKey("PageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Company");
+
+                    b.Navigation("Page");
                 });
 
             modelBuilder.Entity("WebsiteBuilderAPI.Models.Reservation", b =>

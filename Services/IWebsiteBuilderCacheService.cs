@@ -11,6 +11,7 @@ namespace WebsiteBuilderAPI.Services
         Task<string?> GetPagePreviewAsync(int pageId);
         Task SetPagePreviewAsync(int pageId, string content);
         Task<string?> GetPageProductionAsync(int pageId);
+        Task<string?> GetPageProductionBySlugAsync(int companyId, string slug);
         Task SetPageProductionAsync(int pageId, string content);
         Task InvalidatePageCacheAsync(int pageId);
         Task WarmProductionCacheAsync(int pageId);

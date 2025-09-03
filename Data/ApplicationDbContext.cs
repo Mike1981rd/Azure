@@ -105,6 +105,9 @@ namespace WebsiteBuilderAPI.Data
         public DbSet<WhatsAppConversation> WhatsAppConversations { get; set; }
         public DbSet<ContactMessage> ContactMessages { get; set; }
         public DbSet<ContactNotificationSettings> ContactNotificationSettings { get; set; }
+        
+        // Published Snapshots for stable content delivery
+        public DbSet<PublishedSnapshot> PublishedSnapshots { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -1152,6 +1155,36 @@ namespace WebsiteBuilderAPI.Data
                 // Index for global company statistics
                 entity.HasIndex(e => e.CompanyId)
                     .HasFilter("\"ProductId\" IS NULL AND \"RoomId\" IS NULL");
+            });
+            
+            // Configuración de PublishedSnapshot
+            modelBuilder.Entity<PublishedSnapshot>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.PageSlug).HasMaxLength(255);
+                entity.Property(e => e.PageType).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.SnapshotData).IsRequired().HasColumnType("jsonb");
+                entity.Property(e => e.PublishedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+                
+                // Índice compuesto para búsqueda eficiente
+                entity.HasIndex(e => new { e.CompanyId, e.PageSlug, e.IsStale })
+                    .HasDatabaseName("IX_PublishedSnapshots_Lookup");
+                    
+                // Índice para versionado
+                entity.HasIndex(e => new { e.PageId, e.Version })
+                    .HasDatabaseName("IX_PublishedSnapshots_Version");
+                
+                // Relaciones
+                entity.HasOne(e => e.Company)
+                    .WithMany()
+                    .HasForeignKey(e => e.CompanyId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                    
+                entity.HasOne(e => e.Page)
+                    .WithMany()
+                    .HasForeignKey(e => e.PageId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
         }
     }
