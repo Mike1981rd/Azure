@@ -214,10 +214,10 @@ namespace WebsiteBuilderAPI.Controllers
                 // Remove port if present
                 var domainWithoutPort = domain.Split(':')[0].ToLowerInvariant();
                 
-                // Check CustomDomains table for verified domain
-                var verifiedDomain = await _context.CustomDomains
+                // Check Domains table for verified domain
+                var verifiedDomain = await _context.Domains
                     .Where(d => d.CompanyId == companyId && 
-                           d.Domain.ToLower() == domainWithoutPort && 
+                           d.DomainName.ToLower() == domainWithoutPort && 
                            d.IsVerified)
                     .FirstOrDefaultAsync();
                     

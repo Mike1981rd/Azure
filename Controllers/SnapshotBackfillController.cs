@@ -170,17 +170,14 @@ namespace WebsiteBuilderAPI.Controllers
                 sections = page.Sections.Select(s => new
                 {
                     id = s.Id,
-                    type = s.Type,
-                    content = s.Content,
-                    styles = s.Styles,
+                    sectionType = s.SectionType,
+                    config = s.Config,
+                    themeOverrides = s.ThemeOverrides,
                     sortOrder = s.SortOrder,
                     isActive = s.IsActive,
-                    children = s.Children.Select(c => new
+                    children = s.Children?.Select(c => new
                     {
                         id = c.Id,
-                        type = c.Type,
-                        content = c.Content,
-                        styles = c.Styles,
                         sortOrder = c.SortOrder,
                         isActive = c.IsActive
                     })
