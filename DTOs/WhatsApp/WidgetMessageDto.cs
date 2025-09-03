@@ -63,6 +63,18 @@ namespace WebsiteBuilderAPI.DTOs.WhatsApp
         /// </summary>
         [StringLength(100)]
         public string? ClientMessageId { get; set; }
+
+        /// <summary>
+        /// Optional media URL (image/video/document) uploaded previously
+        /// </summary>
+        [StringLength(500)]
+        public string? MediaUrl { get; set; }
+
+        /// <summary>
+        /// Message type: text, image, video, document
+        /// </summary>
+        [StringLength(20)]
+        public string MessageType { get; set; } = "text";
     }
 
     /// <summary>
@@ -131,5 +143,17 @@ namespace WebsiteBuilderAPI.DTOs.WhatsApp
         /// </summary>
         [StringLength(100)]
         public string? SessionId { get; set; }
+
+        /// <summary>
+        /// Optional media URL for agent message (image/video/document)
+        /// </summary>
+        [StringLength(500)]
+        public string? MediaUrl { get; set; }
+
+        /// <summary>
+        /// Optional media content type (e.g., image/jpeg)
+        /// </summary>
+        [StringLength(100)]
+        public string? MediaContentType { get; set; }
     }
 }

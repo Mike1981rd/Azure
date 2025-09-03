@@ -170,10 +170,11 @@ namespace WebsiteBuilderAPI.Controllers
                     TwilioSid = !string.IsNullOrWhiteSpace(dto.ClientMessageId)
                         ? dto.ClientMessageId!.Length > 100 ? dto.ClientMessageId!.Substring(0, 100) : dto.ClientMessageId!
                         : $"WDG{Guid.NewGuid().ToString("N").Substring(0, 12)}",  // Max 15 chars
-                    From = dto.CustomerEmail ?? dto.CustomerName ?? "widget",
+                    From = dto.CustomerEmail ?? dto.CustomerPhone ?? dto.CustomerName ?? "widget",
                     To = "business",
                     Body = dto.Message,
-                    MessageType = "text",
+                    MessageType = string.IsNullOrWhiteSpace(dto.MessageType) ? (string.IsNullOrWhiteSpace(dto.MediaUrl) ? "text" : "document") : dto.MessageType,
+                    MediaUrl = dto.MediaUrl,
                     Direction = "inbound",
                     Status = "received",
                     ConversationId = conversation.Id,
@@ -189,7 +190,9 @@ namespace WebsiteBuilderAPI.Controllers
                         userAgent = dto.UserAgent,
                         ipAddress = dto.IpAddress,
                         customerName = dto.CustomerName,
-                        customerEmail = dto.CustomerEmail
+                        customerEmail = dto.CustomerEmail,
+                        messageType = string.IsNullOrWhiteSpace(dto.MessageType) ? (string.IsNullOrWhiteSpace(dto.MediaUrl) ? "text" : "document") : dto.MessageType,
+                        mediaUrl = dto.MediaUrl
                     })
                 };
 
@@ -306,7 +309,8 @@ namespace WebsiteBuilderAPI.Controllers
                     From = "business",
                     To = conversation.CustomerPhone,
                     Body = dto.Message,
-                    MessageType = dto.MessageType,
+                    MessageType = string.IsNullOrWhiteSpace(dto.MessageType) ? (string.IsNullOrWhiteSpace(dto.MediaUrl) ? "text" : "document") : dto.MessageType,
+                    MediaUrl = dto.MediaUrl,
                     Direction = "outbound",
                     Status = "sent",
                     ConversationId = conversation.Id,
@@ -319,7 +323,8 @@ namespace WebsiteBuilderAPI.Controllers
                     Metadata = JsonSerializer.Serialize(new
                     {
                         agentName = dto.AgentName,
-                        messageType = dto.MessageType
+                        messageType = string.IsNullOrWhiteSpace(dto.MessageType) ? (string.IsNullOrWhiteSpace(dto.MediaUrl) ? "text" : "document") : dto.MessageType,
+                        mediaUrl = dto.MediaUrl
                     })
                 };
 
@@ -425,11 +430,13 @@ namespace WebsiteBuilderAPI.Controllers
                     {
                         id = m.Id,
                         body = m.Body,
-                        // In widget UI, "me" es el visitante; aquí devolvemos solo outbound (agente)
                         isFromMe = false,
                         timestamp = m.Timestamp,
                         status = m.Status,
-                        agentName = agentName
+                        agentName = agentName,
+                        messageType = m.MessageType,
+                        mediaUrl = m.MediaUrl,
+                        mediaContentType = m.MediaContentType
                     };
                 }).ToList();
 
