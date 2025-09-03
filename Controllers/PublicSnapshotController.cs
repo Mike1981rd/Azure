@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using WebsiteBuilderAPI.Data;
 using WebsiteBuilderAPI.Services;
@@ -22,15 +23,20 @@ namespace WebsiteBuilderAPI.Controllers
         private readonly ApplicationDbContext _context;
         private readonly IWebsiteBuilderCacheService _cacheService;
         private readonly ILogger<PublicSnapshotController> _logger;
+        private readonly IConfiguration _configuration;
+        private readonly bool _requiresVerifiedDomain;
 
         public PublicSnapshotController(
             ApplicationDbContext context,
             IWebsiteBuilderCacheService cacheService,
-            ILogger<PublicSnapshotController> logger)
+            ILogger<PublicSnapshotController> logger,
+            IConfiguration configuration)
         {
             _context = context;
             _cacheService = cacheService;
             _logger = logger;
+            _configuration = configuration;
+            _requiresVerifiedDomain = _configuration.GetValue<bool>("WebsiteBuilder:Snapshot:RequiresVerifiedDomain", true);
         }
 
         /// <summary>
@@ -45,6 +51,24 @@ namespace WebsiteBuilderAPI.Controllers
         {
             try
             {
+                // Check domain verification if required
+                if (_requiresVerifiedDomain)
+                {
+                    var hostHeader = Request.Headers["Host"].ToString();
+                    if (!string.IsNullOrEmpty(hostHeader))
+                    {
+                        // Check if domain is verified for this company
+                        var isVerified = await IsDomainVerifiedAsync(companyId, hostHeader);
+                        if (!isVerified)
+                        {
+                            _logger.LogWarning("Unverified domain {Domain} tried to access snapshot for company {CompanyId}", 
+                                hostHeader, companyId);
+                            Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+                            return NotFound(new { error = "Domain not verified", domain = hostHeader });
+                        }
+                    }
+                }
+                
                 // Normalize slug
                 slug = slug?.ToLowerInvariant()?.Trim() ?? "home";
                 
@@ -177,6 +201,47 @@ namespace WebsiteBuilderAPI.Controllers
                 _logger.LogError(ex, "Error retrieving snapshot version {Version} for page {PageId}", 
                     version, pageId);
                 return StatusCode(500, new { error = "Internal server error" });
+            }
+        }
+        
+        /// <summary>
+        /// Check if a domain is verified for a specific company
+        /// </summary>
+        private async Task<bool> IsDomainVerifiedAsync(int companyId, string domain)
+        {
+            try
+            {
+                // Remove port if present
+                var domainWithoutPort = domain.Split(':')[0].ToLowerInvariant();
+                
+                // Check CustomDomains table for verified domain
+                var verifiedDomain = await _context.CustomDomains
+                    .Where(d => d.CompanyId == companyId && 
+                           d.Domain.ToLower() == domainWithoutPort && 
+                           d.IsVerified)
+                    .FirstOrDefaultAsync();
+                    
+                if (verifiedDomain != null)
+                {
+                    _logger.LogInformation("Domain {Domain} is verified for company {CompanyId}", 
+                        domainWithoutPort, companyId);
+                    return true;
+                }
+                
+                // Also allow staging/development domains without verification
+                if (domainWithoutPort.Contains("onrender.com") || 
+                    domainWithoutPort.Contains("localhost") ||
+                    domainWithoutPort.Contains("vercel.app"))
+                {
+                    return true;
+                }
+                
+                return false;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error checking domain verification for {Domain}", domain);
+                return false;
             }
         }
     }
