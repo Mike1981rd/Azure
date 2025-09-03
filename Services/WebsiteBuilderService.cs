@@ -135,21 +135,21 @@ namespace WebsiteBuilderAPI.Services
             // Invalidate cache
             await _cacheService.InvalidatePageCacheAsync(pageId);
             
-            // Generate snapshot automatically if enabled (non-blocking)
+            // Generate snapshot automatically if enabled
+            // TODO: restore Task.Run after debug - currently running inline to catch errors
             if (_autoGenerateSnapshots)
             {
-                _ = Task.Run(async () => 
+                try
                 {
-                    try
-                    {
-                        await GenerateSnapshotAsync(pageId, page.CompanyId);
-                        _logger.LogInformation("Auto-generated snapshot for page {PageId}", pageId);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "Failed to auto-generate snapshot for page {PageId}", pageId);
-                    }
-                });
+                    _logger.LogInformation("[DEBUG] About to generate snapshot inline for page {PageId}", pageId);
+                    await GenerateSnapshotAsync(pageId, page.CompanyId);
+                    _logger.LogInformation("[DEBUG] Auto-generated snapshot inline for page {PageId}", pageId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "[DEBUG] Failed to auto-generate snapshot inline for page {PageId}", pageId);
+                    throw; // Re-throw to see error in response during debug
+                }
             }
 
             _logger.LogInformation("Updated page {PageId}", pageId);
@@ -216,21 +216,21 @@ namespace WebsiteBuilderAPI.Services
             // Invalidate page cache so preview pulls fresh data
             await _cacheService.InvalidatePageCacheAsync(pageId);
             
-            // Generate snapshot automatically if enabled (non-blocking)
+            // Generate snapshot automatically if enabled
+            // TODO: restore Task.Run after debug - currently running inline to catch errors
             if (_autoGenerateSnapshots)
             {
-                _ = Task.Run(async () => 
+                try
                 {
-                    try
-                    {
-                        await GenerateSnapshotAsync(pageId, page.CompanyId);
-                        _logger.LogInformation("Auto-generated snapshot for page {PageId}", pageId);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "Failed to auto-generate snapshot for page {PageId}", pageId);
-                    }
-                });
+                    _logger.LogInformation("[DEBUG] About to generate snapshot inline for page {PageId}", pageId);
+                    await GenerateSnapshotAsync(pageId, page.CompanyId);
+                    _logger.LogInformation("[DEBUG] Auto-generated snapshot inline for page {PageId}", pageId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "[DEBUG] Failed to auto-generate snapshot inline for page {PageId}", pageId);
+                    throw; // Re-throw to see error in response during debug
+                }
             }
 
             return await GetPageByIdAsync(pageId);
@@ -1092,6 +1092,9 @@ namespace WebsiteBuilderAPI.Services
         /// </summary>
         private async Task GenerateSnapshotAsync(int pageId, int companyId)
         {
+            _logger.LogInformation("[SNAPSHOT] Entering GenerateSnapshotAsync - PageId: {PageId}, CompanyId: {CompanyId}", 
+                pageId, companyId);
+            
             try
             {
                 // Load complete page data
@@ -1100,7 +1103,14 @@ namespace WebsiteBuilderAPI.Services
                         .ThenInclude(s => s.Children.OrderBy(c => c.SortOrder))
                     .FirstOrDefaultAsync(p => p.Id == pageId);
                     
-                if (page == null) return;
+                if (page == null)
+                {
+                    _logger.LogWarning("[SNAPSHOT] Page not found - PageId: {PageId}", pageId);
+                    return;
+                }
+                
+                _logger.LogInformation("[SNAPSHOT] Page loaded - Slug: {Slug}, PageType: {PageType}", 
+                    page.Slug, page.PageType);
                 
                 // Check for existing snapshot
                 var existingSnapshot = await _context.PublishedSnapshots
@@ -1115,6 +1125,7 @@ namespace WebsiteBuilderAPI.Services
                 }
                 
                 // Create complete snapshot data
+                _logger.LogInformation("[SNAPSHOT] Creating snapshot data for page {PageId}", pageId);
                 var snapshotData = new
                 {
                     pageId = page.Id,
@@ -1149,28 +1160,42 @@ namespace WebsiteBuilderAPI.Services
                 };
                 
                 // Create new snapshot
+                _logger.LogInformation("[SNAPSHOT] Serializing snapshot data...");
+                var jsonData = JsonSerializer.Serialize(snapshotData);
+                _logger.LogInformation("[SNAPSHOT] Serialized data size: {Size} bytes", jsonData.Length);
+                
                 var snapshot = new PublishedSnapshot
                 {
                     CompanyId = companyId,
                     PageId = pageId,
                     PageSlug = page.Slug,
                     PageType = page.PageType,
-                    SnapshotData = JsonSerializer.Serialize(snapshotData),
+                    SnapshotData = jsonData,
                     Version = (existingSnapshot?.Version ?? 0) + 1,
                     IsStale = false,
                     PublishedAt = DateTime.UtcNow,
                     CreatedAt = DateTime.UtcNow
                 };
                 
+                _logger.LogInformation("[SNAPSHOT] Adding snapshot to context...");
                 _context.PublishedSnapshots.Add(snapshot);
-                await _context.SaveChangesAsync();
                 
-                _logger.LogInformation("Generated snapshot v{Version} for page {PageId}", 
-                    snapshot.Version, pageId);
+                _logger.LogInformation("[SNAPSHOT] Saving to database...");
+                var changes = await _context.SaveChangesAsync();
+                
+                _logger.LogInformation("[SNAPSHOT] SUCCESS - Generated snapshot v{Version} for page {PageId}, Changes saved: {Changes}", 
+                    snapshot.Version, pageId, changes);
+                _logger.LogInformation("[SNAPSHOT] Snapshot ID: {SnapshotId}, Slug: {Slug}", 
+                    snapshot.Id, snapshot.PageSlug);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to generate snapshot for page {PageId}", pageId);
+                _logger.LogError(ex, "[SNAPSHOT] ERROR generating snapshot for page {PageId}. StackTrace: {StackTrace}", 
+                    pageId, ex.StackTrace);
+            }
+            finally
+            {
+                _logger.LogInformation("[SNAPSHOT] Exiting GenerateSnapshotAsync - PageId: {PageId}", pageId);
             }
         }
 
