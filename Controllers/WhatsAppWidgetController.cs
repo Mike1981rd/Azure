@@ -362,28 +362,47 @@ namespace WebsiteBuilderAPI.Controllers
         /// Get messages for a widget session (for polling)
         /// </summary>
         [HttpGet("session/{sessionId}/messages")]
-        public async Task<IActionResult> GetWidgetMessages(string sessionId, [FromQuery] DateTime? since)
+        public async Task<IActionResult> GetWidgetMessages(string sessionId, [FromQuery] DateTime? since, [FromQuery] Guid? conversationId = null)
         {
             try
             {
                 var companyId = GetCompanyId();
-                
                 // For the public widget polling, return ONLY outbound messages (agent → widget)
-                // This avoids duplicating customer messages that the client already renders locally
-                var query = _context.WhatsAppMessages
-                    .Where(m => m.SessionId == sessionId && 
-                           m.CompanyId == companyId &&
-                           m.Direction == "outbound");
+                // Primary path: filter by SessionId (normal flujo)
+                IQueryable<WhatsAppMessage> baseQuery = _context.WhatsAppMessages
+                    .Where(m => m.CompanyId == companyId && m.Direction == "outbound");
 
+                IQueryable<WhatsAppMessage> qBySession = baseQuery.Where(m => m.SessionId == sessionId);
                 if (since.HasValue)
+                    qBySession = qBySession.Where(m => m.Timestamp > since.Value);
+
+                var rawMessages = await qBySession.OrderBy(m => m.Timestamp).ToListAsync();
+
+                // Fallback A: if conversationId provided, prefer by ConversationId
+                if (rawMessages.Count == 0 && conversationId.HasValue)
                 {
-                    query = query.Where(m => m.Timestamp > since.Value);
+                    var qByConvoParam = baseQuery.Where(m => m.ConversationId == conversationId.Value);
+                    if (since.HasValue)
+                        qByConvoParam = qByConvoParam.Where(m => m.Timestamp > since.Value);
+                    rawMessages = await qByConvoParam.OrderBy(m => m.Timestamp).ToListAsync();
                 }
 
-                var rawMessages = await query
-                    .OrderBy(m => m.Timestamp)
-                    .ToListAsync();
-                
+                // Fallback B: if nothing by SessionId (p.ej., la sesión cambió por reload),
+                // localizar conversación por SessionId y devolver outbound por ConversationId
+                if (rawMessages.Count == 0)
+                {
+                    var convo = await _context.WhatsAppConversations.AsNoTracking()
+                        .FirstOrDefaultAsync(c => c.CompanyId == companyId && c.SessionId == sessionId);
+                    if (convo != null)
+                    {
+                        var qByConvo = baseQuery.Where(m => m.ConversationId == convo.Id);
+                        if (since.HasValue)
+                            qByConvo = qByConvo.Where(m => m.Timestamp > since.Value);
+
+                        rawMessages = await qByConvo.OrderBy(m => m.Timestamp).ToListAsync();
+                    }
+                }
+
                 var messages = rawMessages.Select(m => {
                     string agentName = null;
                     if (m.Metadata != null)
@@ -403,8 +422,7 @@ namespace WebsiteBuilderAPI.Controllers
                     {
                         id = m.Id,
                         body = m.Body,
-                        // In widget UI, "me" is the visitor; but this endpoint returns only outbound (agent) messages
-                        // so mark them as not-from-me to render on the left.
+                        // In widget UI, "me" es el visitante; aquí devolvemos solo outbound (agente)
                         isFromMe = false,
                         timestamp = m.Timestamp,
                         status = m.Status,
