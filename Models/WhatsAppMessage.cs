@@ -149,6 +149,21 @@ namespace WebsiteBuilderAPI.Models
         /// </summary>
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
+        /// <summary>
+        /// Soft delete flag - message appears as deleted in UI
+        /// </summary>
+        public bool IsDeleted { get; set; } = false;
+
+        /// <summary>
+        /// When the message was deleted
+        /// </summary>
+        public DateTime? DeletedAt { get; set; }
+
+        /// <summary>
+        /// User who deleted the message
+        /// </summary>
+        public int? DeletedByUserId { get; set; }
+
         // Navigation properties
         public virtual WhatsAppConversation Conversation { get; set; } = null!;
         public virtual Company Company { get; set; } = null!;

@@ -1498,6 +1498,61 @@ namespace WebsiteBuilderAPI.Controllers
             }
         }
 
+        private int GetUserId()
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+            {
+                return 0;
+            }
+            return userId;
+        }
+
+        /// <summary>
+        /// Delete a WhatsApp message (soft delete)
+        /// </summary>
+        [HttpDelete("conversations/{conversationId}/messages/{messageId}")]
+        public async Task<IActionResult> DeleteMessage(Guid conversationId, Guid messageId)
+        {
+            try
+            {
+                var companyId = GetCompanyId();
+                var userId = GetUserId();
+                
+                _logger.LogInformation("Deleting message {MessageId} from conversation {ConversationId} for company {CompanyId}", 
+                    messageId, conversationId, companyId);
+
+                var service = GetActiveWhatsAppService();
+                var result = await service.DeleteMessageAsync(companyId, conversationId, messageId, userId);
+
+                if (!result)
+                {
+                    return NotFound(new ApiResponse<object>
+                    {
+                        Success = false,
+                        Message = "Message not found or already deleted"
+                    });
+                }
+
+                return Ok(new ApiResponse<object>
+                {
+                    Success = true,
+                    Message = "Message deleted successfully",
+                    Data = new { messageId, deletedAt = DateTime.UtcNow }
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting message {MessageId} from conversation {ConversationId}", 
+                    messageId, conversationId);
+                return StatusCode(500, new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "An error occurred while deleting the message"
+                });
+            }
+        }
+
         /// <summary>
         /// Test authentication and authorization
         /// </summary>

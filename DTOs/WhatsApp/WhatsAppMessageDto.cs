@@ -28,6 +28,7 @@ namespace WebsiteBuilderAPI.DTOs.WhatsApp
         public DateTime? DeliveredAt { get; set; }
         public DateTime? ReadAt { get; set; }
         public Dictionary<string, object>? Metadata { get; set; }
+        public bool IsDeleted { get; set; }
     }
 
     /// <summary>

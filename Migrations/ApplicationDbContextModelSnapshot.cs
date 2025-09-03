@@ -4526,6 +4526,12 @@ namespace WebsiteBuilderAPI.Migrations
                     b.Property<int?>("CustomerId")
                         .HasColumnType("integer");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("DeletedByUserId")
+                        .HasColumnType("integer");
+
                     b.Property<DateTime?>("DeliveredAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -4544,8 +4550,11 @@ namespace WebsiteBuilderAPI.Migrations
 
                     b.Property<string>("From")
                         .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("MediaContentType")
                         .HasMaxLength(50)
@@ -4588,8 +4597,8 @@ namespace WebsiteBuilderAPI.Migrations
 
                     b.Property<string>("To")
                         .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
 
                     b.Property<string>("TwilioSid")
                         .IsRequired()

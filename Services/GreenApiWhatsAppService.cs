@@ -2470,6 +2470,11 @@ namespace WebsiteBuilderAPI.Services
 
         private WhatsAppMessageDto MapMessageToDto(WhatsAppMessage message)
         {
+            // Handle deleted messages - replace content with deletion message
+            var body = message.IsDeleted 
+                ? "🗑️ Este mensaje fue eliminado" 
+                : message.Body;
+
             return new WhatsAppMessageDto
             {
                 Id = message.Id,
@@ -2477,14 +2482,15 @@ namespace WebsiteBuilderAPI.Services
                 TwilioSid = message.TwilioSid, // Using TwilioSid field for message ID
                 From = message.From,
                 To = message.To,
-                Body = message.Body,
+                Body = body,
                 MessageType = message.MessageType,
                 Direction = message.Direction,
                 Status = message.Status,
-                MediaUrl = message.MediaUrl,
+                MediaUrl = message.IsDeleted ? null : message.MediaUrl, // Hide media for deleted messages
                 MediaContentType = message.MediaContentType,
                 ReadAt = message.ReadAt,
-                Timestamp = message.Timestamp
+                Timestamp = message.Timestamp,
+                IsDeleted = message.IsDeleted
             };
         }
 
@@ -2539,6 +2545,45 @@ namespace WebsiteBuilderAPI.Services
                 ".txt" => "text/plain",
                 _ => "application/octet-stream"
             };
+        }
+
+        #endregion
+
+        #region Message Management
+
+        public async Task<bool> DeleteMessageAsync(int companyId, Guid conversationId, Guid messageId, int userId)
+        {
+            try
+            {
+                // Find and soft delete the message
+                var message = await _context.WhatsAppMessages
+                    .FirstOrDefaultAsync(m => m.Id == messageId && 
+                                            m.ConversationId == conversationId && 
+                                            m.CompanyId == companyId &&
+                                            !m.IsDeleted);
+
+                if (message == null)
+                {
+                    _logger.LogWarning("Message {MessageId} not found or already deleted", messageId);
+                    return false;
+                }
+
+                // Mark as deleted (soft delete)
+                message.IsDeleted = true;
+                message.DeletedAt = DateTime.UtcNow;
+                message.DeletedByUserId = userId;
+                message.UpdatedAt = DateTime.UtcNow;
+
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Message {MessageId} soft deleted by user {UserId}", messageId, userId);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting message {MessageId}", messageId);
+                throw;
+            }
         }
 
         #endregion

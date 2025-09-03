@@ -61,5 +61,8 @@ namespace WebsiteBuilderAPI.Services
         // Provider identification
         string ProviderName { get; }
         bool IsConfigured(int companyId);
+        
+        // Message management
+        Task<bool> DeleteMessageAsync(int companyId, Guid conversationId, Guid messageId, int userId);
     }
 }
