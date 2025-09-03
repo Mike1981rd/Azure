@@ -26,6 +26,28 @@ namespace WebsiteBuilderAPI.Controllers
         }
 
         /// <summary>
+        /// Debug endpoint para verificar claims del token
+        /// </summary>
+        [HttpGet("debug-claims")]
+        public IActionResult DebugClaims()
+        {
+            var claims = User.Claims.Select(c => new { c.Type, c.Value }).ToList();
+            var companyId = GetCompanyIdFromToken();
+            
+            return Ok(new
+            {
+                claims = claims,
+                detectedCompanyId = companyId,
+                identity = new
+                {
+                    isAuthenticated = User.Identity?.IsAuthenticated,
+                    name = User.Identity?.Name,
+                    authenticationType = User.Identity?.AuthenticationType
+                }
+            });
+        }
+
+        /// <summary>
         /// Crear un nuevo dominio
         /// </summary>
         [HttpPost]
