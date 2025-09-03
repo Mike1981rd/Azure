@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -680,13 +681,18 @@ namespace WebsiteBuilderAPI.Controllers
         // Helper methods
         private int GetCompanyIdFromToken()
         {
-            // Usar minúsculas según Guardado.md
-            var companyIdClaim = User.FindFirst("companyId")?.Value;
+            // Try multiple claim name variations for compatibility
+            // CRITICAL: Check lowercase first per Guardado.md, then fallback to other formats
+            var companyIdClaim = User.FindFirst("companyId")?.Value ?? 
+                               User.FindFirst("CompanyId")?.Value ?? 
+                               User.FindFirst("company_id")?.Value;
             
             if (string.IsNullOrEmpty(companyIdClaim) || !int.TryParse(companyIdClaim, out int companyId))
             {
-                // Fallback para single-tenant
-                _logger.LogWarning("CompanyId no encontrado en token, usando valor por defecto 1");
+                // Log available claims for debugging
+                var claims = User.Claims.Select(c => $"{c.Type}:{c.Value}").ToArray();
+                _logger.LogWarning("CompanyId no encontrado en token. Claims disponibles: {Claims}. Usando valor por defecto 1", 
+                    string.Join(", ", claims));
                 return 1;
             }
             
