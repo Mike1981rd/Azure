@@ -674,12 +674,16 @@ namespace WebsiteBuilderAPI.Services
                 if ((conversation.Source ?? string.Empty).Equals("widget", StringComparison.OrdinalIgnoreCase))
                 {
                     _logger.LogInformation("[WIDGET DEBUG] Conversation {ConvId} IS A WIDGET - serving from DB directly", conversationId);
+                    // Get the most recent messages first, then order ascending for UI
                     var widgetDb = await _context.WhatsAppMessages.AsNoTracking()
                         .Where(m => m.CompanyId == companyId && m.ConversationId == conversationId)
-                        .OrderBy(m => m.Timestamp)
+                        .OrderByDescending(m => m.Timestamp)
                         .Take(pageSize)
                         .ToListAsync();
-                    var widgetDtos = widgetDb.Select(MapMessageToDto).ToList();
+                    var widgetDtos = widgetDb
+                        .OrderBy(m => m.Timestamp)
+                        .Select(MapMessageToDto)
+                        .ToList();
                     _logger.LogInformation("[WIDGET DEBUG] Found {Count} messages in DB for widget conversation {ConvId}", widgetDtos.Count, conversationId);
                     if (widgetDtos.Count > 0)
                     {
