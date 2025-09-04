@@ -115,6 +115,19 @@ namespace WebsiteBuilderAPI.Controllers
                 }
 
                 // Return only basic public info
+                // Include safe geolocation data for public maps (Mapbox public tokens only)
+                string? geoProvider = company.GeolocationProvider;
+                string? geoPublicToken = null;
+                if (!string.IsNullOrEmpty(geoProvider) && geoProvider.Equals("mapbox", StringComparison.OrdinalIgnoreCase))
+                {
+                    var token = company.GeolocationToken ?? string.Empty;
+                    // Only expose public Mapbox tokens (pk.*). Never expose secret tokens (sk.*)
+                    if (token.StartsWith("pk."))
+                    {
+                        geoPublicToken = token;
+                    }
+                }
+
                 return Ok(new
                 {
                     id = company.Id,
@@ -128,7 +141,9 @@ namespace WebsiteBuilderAPI.Controllers
                     state = company.State,
                     postalCode = company.PostalCode,
                     phone = company.PhoneNumber,
-                    email = company.ContactEmail
+                    email = company.ContactEmail,
+                    geolocationProvider = geoProvider,
+                    geolocationPublicToken = geoPublicToken
                 });
             }
             catch (Exception ex)
