@@ -95,8 +95,7 @@ namespace WebsiteBuilderAPI.Controllers
             _logger.LogInformation("CVV present: {HasCVV}", !string.IsNullOrEmpty(dto?.CVV));
             _logger.LogInformation("=================================");
 
-            using var transaction = await _context.Database.BeginTransactionAsync();
-
+            ActionResult<ProcessRoomReservationResponseDto>? finalResult = null;
             try
             {
                 if (!ModelState.IsValid)
@@ -235,6 +234,14 @@ namespace WebsiteBuilderAPI.Controllers
                     });
                 }
 
+                // Ejecutar operaciones de BD bajo ExecutionStrategy + transacción para compatibilidad con EnableRetryOnFailure
+                var executionStrategy = _context.Database.CreateExecutionStrategy();
+
+                await executionStrategy.ExecuteAsync(async () =>
+                {
+                    await using var transaction = await _context.Database.BeginTransactionAsync();
+                    try
+                    {
                 // Step 1: Create or update customer
                 _logger.LogInformation("Processing customer for email: {Email}", dto.Email);
                 
@@ -614,7 +621,7 @@ namespace WebsiteBuilderAPI.Controllers
 
                     _logger.LogInformation("Reservation process completed successfully for reservation ID: {ReservationId}", reservation.Id);
 
-                    return Ok(new ProcessRoomReservationResponseDto
+                    finalResult = Ok(new ProcessRoomReservationResponseDto
                     {
                         Success = true,
                         Message = "Reservation confirmed successfully",
@@ -625,13 +632,14 @@ namespace WebsiteBuilderAPI.Controllers
                         AccountCreated = accountCreated,
                         PasswordEmailSent = passwordEmailSent
                     });
+                    return; // finish lambda
                 }
                 else
                 {
                     // Payment failed - rollback
                     await transaction.RollbackAsync();
                     
-                    return BadRequest(new ProcessRoomReservationResponseDto
+                    finalResult = BadRequest(new ProcessRoomReservationResponseDto
                     {
                         Success = false,
                         Message = "Payment processing failed",
@@ -641,6 +649,7 @@ namespace WebsiteBuilderAPI.Controllers
                             Description = "Unable to process payment. Please check your card details and try again."
                         }
                     });
+                    return; // finish lambda
                 }
             }
             catch (Exception ex)
@@ -648,6 +657,23 @@ namespace WebsiteBuilderAPI.Controllers
                 await transaction.RollbackAsync();
                 _logger.LogError(ex, "Error processing room reservation");
                 
+                finalResult = StatusCode(500, new ProcessRoomReservationResponseDto
+                {
+                    Success = false,
+                    Message = "An error occurred while processing your reservation",
+                    Error = new ProcessReservationErrorDto
+                    {
+                        Code = "INTERNAL_ERROR",
+                        Description = "An unexpected error occurred. Please try again later."
+                    }
+                });
+                return; // finish lambda
+            }
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unhandled error processing room reservation");
                 return StatusCode(500, new ProcessRoomReservationResponseDto
                 {
                     Success = false,
@@ -659,6 +685,22 @@ namespace WebsiteBuilderAPI.Controllers
                     }
                 });
             }
+
+            if (finalResult == null)
+            {
+                _logger.LogError("finalResult was null after execution strategy block");
+                return StatusCode(500, new ProcessRoomReservationResponseDto
+                {
+                    Success = false,
+                    Message = "An error occurred while processing your reservation",
+                    Error = new ProcessReservationErrorDto
+                    {
+                        Code = "INTERNAL_ERROR",
+                        Description = "Unexpected state after processing reservation."
+                    }
+                });
+            }
+            return finalResult;
         }
 
         private static string DetectCardType(string cardNumber)
