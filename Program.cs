@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.Extensions.FileProviders;
 using Npgsql;
 using Serilog;
 using Serilog.Events;
@@ -385,6 +386,30 @@ try
 
     // Servir archivos estáticos desde wwwroot
     app.UseStaticFiles();
+
+    // Si existe un directorio de almacenamiento persistente (p. ej., /data en Render),
+    // mapear /uploads a ese directorio para que los archivos sobrevivan a los deploys.
+    try
+    {
+        var persistentRoot = builder.Configuration["Storage:Local:Root"]
+            ?? Environment.GetEnvironmentVariable("UPLOADS_ROOT_PATH")
+            ?? Environment.GetEnvironmentVariable("PERSISTENT_UPLOADS_PATH");
+        if (!string.IsNullOrWhiteSpace(persistentRoot))
+        {
+            var uploadsPath = Path.Combine(persistentRoot!, "uploads");
+            Directory.CreateDirectory(uploadsPath);
+            app.UseStaticFiles(new StaticFileOptions
+            {
+                FileProvider = new PhysicalFileProvider(uploadsPath),
+                RequestPath = "/uploads"
+            });
+            Log.Information("Static files mapped: /uploads -> {Path}", uploadsPath);
+        }
+    }
+    catch (Exception mapEx)
+    {
+        Log.Warning(mapEx, "Could not map persistent /uploads directory. Falling back to wwwroot.");
+    }
 
     app.UseAuthentication();
     app.UseAuthorization();
