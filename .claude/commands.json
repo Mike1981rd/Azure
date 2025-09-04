@@ -1,0 +1,30 @@
+{
+  "commands": {
+    "init-session": {
+      "description": "Initialize session by reading all required configuration files",
+      "action": "read-files",
+      "files": [
+        "CLAUDE.md",
+        "docs/implementations/features/2025-01-live-preview.md",
+        "docs/WEBSITE-BUILDER-MODULE-GUIDE.md",
+        ".claude-rules-enforcement.md",
+        "blueprint1.md",
+        "blueprint2.md",
+        "blueprint3.md",
+        "CLAUDEBK1.md",
+        "CLAUDEBK2.md",
+        "logs.md"
+      ]
+    },
+    "init-websitebuilder": {
+      "description": "Initialize Website Builder session",
+      "action": "read-files",
+      "files": [
+        "websitebuilderprogress.md",
+        "blueprintwebsite.md",
+        "docs/WEBSITE-BUILDER-ARCHITECTURE.md",
+        "docs/WEBSITE-BUILDER-TROUBLESHOOTING.md"
+      ]
+    }
+  }
+}

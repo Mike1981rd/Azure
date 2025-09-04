@@ -29,6 +29,38 @@
 • **NO usar localhost** → Obtener IP: `ip route | grep default` (típicamente `172.25.64.1`)
 • Playwright/API: usar `http://172.25.64.1:3000` NO `http://localhost:3000`
 
+## 🔧 CÓMO CREAR COMANDOS SLASH PERSONALIZADOS EN CLAUDE CODE
+
+**⚠️ IMPORTANTE**: Los comandos slash personalizados NO son comandos del sistema operativo, son comandos específicos de Claude Code.
+
+### Pasos para crear un comando slash:
+
+1. **Crear directorio de comandos** (si no existe):
+   ```powershell
+   powershell.exe -Command "mkdir -Force '.claude\commands'"
+   ```
+
+2. **Crear archivo Markdown** con el nombre del comando:
+   - Para `/init-session` → crear `.claude\commands\init-session.md`
+   - Para `/deploy-vercel` → crear `.claude\commands\deploy-vercel.md`
+
+3. **Estructura del archivo** (ejemplo para init-session.md):
+   ```markdown
+   ---
+   description: Descripción corta del comando
+   ---
+   
+   Instrucciones en lenguaje natural para Claude.
+   Puede usar $ARGUMENTS para capturar argumentos.
+   ```
+
+4. **Ubicaciones disponibles**:
+   - **Proyecto**: `.claude/commands/` (compartido con el equipo)
+   - **Usuario**: `~/.claude/commands/` (personal, aparece con "(user)")
+   - **Subdirectorios**: `.claude/commands/frontend/component.md` → `/frontend:component`
+
+5. **Verificar**: Escribir `/` en Claude Code debe mostrar los comandos disponibles
+
 ## 🎯 COMANDO /init-session
 Leer OBLIGATORIAMENTE:
 1. `CLAUDE.md` → Este archivo de configuración

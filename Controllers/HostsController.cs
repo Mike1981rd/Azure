@@ -108,7 +108,12 @@ namespace WebsiteBuilderAPI.Controllers
                 _logger.LogWarning("CompanyId not found in token, using default: {companyId}", companyId);
             }
                 
-            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            // Try multiple common claim types for user identifier to be robust across issuers
+            var userId =
+                User.FindFirst(ClaimTypes.NameIdentifier)?.Value ??
+                User.FindFirst("sub")?.Value ??
+                User.FindFirst("userId")?.Value ??
+                User.FindFirst(ClaimTypes.Name)?.Value;
             _logger.LogInformation("UserId from token: {userId}", userId);
             
             if (string.IsNullOrEmpty(userId))

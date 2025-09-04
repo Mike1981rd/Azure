@@ -69,6 +69,9 @@ namespace WebsiteBuilderAPI.Controllers
                 // Obtener CompanyId del token (usando minúsculas según Guardado.md)
                 var companyId = GetCompanyIdFromToken();
                 var userId = User.Identity?.Name ?? "System";
+                
+                // Temporary logging for debugging production issue
+                _logger.LogWarning($"[DOMAIN_DEBUG] CreateDomain called - CompanyId: {companyId}, UserId: {userId}, DomainName: {dto.DomainName}");
 
                 var result = await _domainService.CreateDomainAsync(companyId, dto, userId);
 
