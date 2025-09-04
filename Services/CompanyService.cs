@@ -13,15 +13,18 @@ namespace WebsiteBuilderAPI.Services
         private readonly ApplicationDbContext _context;
         private readonly ILogger<CompanyService> _logger;
         private readonly IWebHostEnvironment _environment;
+        private readonly WebsiteBuilderAPI.Services.Storage.IStorageService _storage;
 
         public CompanyService(
             ApplicationDbContext context,
             ILogger<CompanyService> logger,
-            IWebHostEnvironment environment)
+            IWebHostEnvironment environment,
+            WebsiteBuilderAPI.Services.Storage.IStorageService storage)
         {
             _context = context;
             _logger = logger;
             _environment = environment;
+            _storage = storage;
         }
 
         public async Task<CompanyResponseDto?> GetCurrentCompanyAsync()
@@ -417,25 +420,15 @@ namespace WebsiteBuilderAPI.Services
                 await _context.SaveChangesAsync();
             }
 
-            // Save file under wwwroot/uploads/checkout/
-            var webRoot = _environment.WebRootPath;
-            if (string.IsNullOrWhiteSpace(webRoot))
-            {
-                // Fallback for environments without WebRootPath set
-                webRoot = Path.Combine(AppContext.BaseDirectory, "wwwroot");
-            }
-            var uploadsPath = Path.Combine(webRoot, "uploads", "checkout");
-            Directory.CreateDirectory(uploadsPath);
+            // Save using configured storage provider (local persistent disk or cloud)
             var fileExtension = Path.GetExtension(file.FileName);
             var fileName = $"checkout_logo_{DateTime.UtcNow:yyyyMMddHHmmss}{fileExtension}";
-            var filePath = Path.Combine(uploadsPath, fileName);
-            using (var stream = new FileStream(filePath, FileMode.Create))
-            {
-                await file.CopyToAsync(stream);
-            }
+            await using var ms = new MemoryStream();
+            await file.CopyToAsync(ms);
+            ms.Position = 0;
+            var logoUrl = await _storage.UploadAsync(ms, fileName, file.ContentType, "checkout");
 
             // Update settings with the new logo URL
-            var logoUrl = $"/uploads/checkout/{fileName}";
             settings.CheckoutLogoUrl = logoUrl;
             settings.UpdatedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
