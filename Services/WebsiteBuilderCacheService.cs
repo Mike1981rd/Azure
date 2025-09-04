@@ -189,6 +189,15 @@ namespace WebsiteBuilderAPI.Services
             _logger.LogInformation("Set production cache for page {PageId}", pageId);
         }
 
+        public async Task InvalidatePageCacheBySlugAsync(int companyId, string slug)
+        {
+            var cacheKey = $"{PRODUCTION_PREFIX}company:{companyId}:slug:{slug}";
+            _memoryCache.Remove(cacheKey);
+            // We currently do not persist slug-based entries in distributed cache
+            _logger.LogInformation("Invalidated production slug cache for company {CompanyId}, slug {Slug}", companyId, slug);
+            await Task.CompletedTask;
+        }
+
         public async Task InvalidatePageCacheAsync(int pageId)
         {
             var previewKey = $"{PREVIEW_PREFIX}{pageId}";

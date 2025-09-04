@@ -217,8 +217,23 @@ namespace WebsiteBuilderAPI.Services
 
             await _context.SaveChangesAsync();
 
-            // Invalidate page cache so preview pulls fresh data
+            // Invalidate page caches so preview and public (slug) pull fresh data
             await _cacheService.InvalidatePageCacheAsync(pageId);
+            try
+            {
+                // Also invalidate slug-based production cache
+                var updatedPage = await _context.WebsitePages.Where(p => p.Id == pageId)
+                    .Select(p => new { p.CompanyId, p.Slug })
+                    .FirstOrDefaultAsync();
+                if (updatedPage != null && !string.IsNullOrWhiteSpace(updatedPage.Slug))
+                {
+                    await _cacheService.InvalidatePageCacheBySlugAsync(updatedPage.CompanyId, updatedPage.Slug.ToLowerInvariant());
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "[CACHE] Failed to invalidate slug cache for page {PageId}", pageId);
+            }
             
             // Generate snapshot automatically if enabled
             // TODO: restore Task.Run after debug - currently running inline to catch errors
@@ -1191,6 +1206,16 @@ namespace WebsiteBuilderAPI.Services
                     snapshot.Version, pageId, changes);
                 _logger.LogInformation("[SNAPSHOT] Snapshot ID: {SnapshotId}, Slug: {Slug}", 
                     snapshot.Id, snapshot.PageSlug);
+
+                // Invalidate slug-based cache after new snapshot is persisted
+                try
+                {
+                    await _cacheService.InvalidatePageCacheBySlugAsync(snapshot.CompanyId, snapshot.PageSlug.ToLowerInvariant());
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "[CACHE] Failed to invalidate slug cache after snapshot for page {PageId}", pageId);
+                }
             }
             catch (Exception ex)
             {

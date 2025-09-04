@@ -17,7 +17,7 @@
 **Vercel**: `websitebuilder-admin.vercel.app`
 **Neon DB**: 
 • Host: `ep-withered-paper-ad3yhgct.c-2.us-east-1.aws.neon.tech`
-• User: `neondb_owner` / Pass: `npg_U1xrFkcz8PDC`
+• User: `neondb_owner` / Pass: `<REDACTED>`
 
 ## 🛑 REGLAS DESARROLLO
 • **Max 300 líneas/archivo** → Si >250 líneas, crear nuevo archivo
@@ -112,7 +112,7 @@ Leer:
 • Módulos `room_*` SOLO en `pageType === CUSTOM`
 
 ## 🔐 PLAYWRIGHT CONFIG
-**Credenciales**: `miguelnuez919@yahoo.com` / `123456`
+**Credenciales**: `miguelnuez919@yahoo.com` / `<REDACTED>`
 **IP Host Windows**: verificar con `ip route | grep default`
 **URL**: `http://172.25.64.1:3000/login`
 
@@ -121,7 +121,7 @@ Leer:
 **Vercel** (Claude ejecuta):
 ```bash
 cd /mnt/c/Users/hp/Documents/Visual\ Studio\ 2022/Projects/WebsiteBuilderAPI/websitebuilder-admin
-npx vercel --prod --yes --token wdnjcPrnirBnWbEXu1zZGIiR
+npx vercel --prod --yes --token <VERCEL_TOKEN>
 ```
 
 **Backend detener**:
@@ -132,10 +132,10 @@ powershell.exe -Command "Get-Process dotnet | Stop-Process -Force"
 ## 🐘 SUPABASE CLI
 ```bash
 export PATH="$HOME/.local/bin:$PATH"
-export SUPABASE_ACCESS_TOKEN="sbp_6d79604906628971ef0bcfdd98219a2f2418972a"
+export SUPABASE_ACCESS_TOKEN="<SUPABASE_ACCESS_TOKEN>"
 ```
 • Project ID: `gvxqatvwkjmkvaslbevh`
-• DB Pass: `AllisoN@1710.#`
+• DB Pass: `<REDACTED>`
 • Pooler: `aws-1-us-east-1.pooler.supabase.com:6543`
 
 ## ⚠️ CHECKLIST PRE-ACCIÓN
