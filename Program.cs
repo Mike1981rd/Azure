@@ -367,7 +367,7 @@ try
             context.Response.Headers["Vary"] = "Origin";
             context.Response.Headers["Access-Control-Allow-Credentials"] = "true";
             context.Response.Headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With, X-CSRF-Token";
-            context.Response.Headers["Access-Control-Allow-Methods"] = "GET,POST,PUT,DELETE,OPTIONS";
+            context.Response.Headers["Access-Control-Allow-Methods"] = "GET,POST,PUT,DELETE,PATCH,OPTIONS";
         }
         if (string.Equals(context.Request.Method, "OPTIONS", StringComparison.OrdinalIgnoreCase))
         {
