@@ -17,6 +17,13 @@ namespace WebsiteBuilderAPI.Services.Storage
             _rootOverride = configuration["Storage:Local:Root"]
                 ?? Environment.GetEnvironmentVariable("UPLOADS_ROOT_PATH")
                 ?? Environment.GetEnvironmentVariable("PERSISTENT_UPLOADS_PATH");
+            // If running on Render and no explicit root provided, default to /data (expected persistent disk mount)
+            var isRender = !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("RENDER"))
+                           || !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("RENDER_SERVICE_ID"));
+            if (string.IsNullOrWhiteSpace(_rootOverride) && isRender)
+            {
+                _rootOverride = "/data";
+            }
         }
 
         public async Task<string> UploadAsync(Stream stream, string fileName, string contentType, string folder)

@@ -394,6 +394,15 @@ try
         var persistentRoot = builder.Configuration["Storage:Local:Root"]
             ?? Environment.GetEnvironmentVariable("UPLOADS_ROOT_PATH")
             ?? Environment.GetEnvironmentVariable("PERSISTENT_UPLOADS_PATH");
+        if (string.IsNullOrWhiteSpace(persistentRoot))
+        {
+            var isRender = !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("RENDER"))
+                           || !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("RENDER_SERVICE_ID"));
+            if (isRender)
+            {
+                persistentRoot = "/data"; // default Render disk mount path
+            }
+        }
         if (!string.IsNullOrWhiteSpace(persistentRoot))
         {
             var uploadsPath = Path.Combine(persistentRoot!, "uploads");
