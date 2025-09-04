@@ -133,10 +133,15 @@ namespace WebsiteBuilderAPI.Services
                 LastName = dto.LastName,
                 // FullName is computed property, don't set it
                 Email = dto.Email,
-                PhoneNumber = dto.PhoneNumber,
-                ProfilePicture = dto.ProfilePicture,
+                // Defensive defaults for NOT NULL columns in some DB schemas
+                PhoneNumber = string.IsNullOrEmpty(dto.PhoneNumber) ? string.Empty : dto.PhoneNumber,
+                ProfilePicture = string.IsNullOrEmpty(dto.ProfilePicture) ? string.Empty : dto.ProfilePicture,
                 Bio = dto.Bio,
                 DateOfBirth = dto.DateOfBirth,
+                // Some production databases have these columns as NOT NULL
+                // Ensure we never send nulls even if UI doesn't collect them
+                Location = string.Empty,
+                Work = string.Empty,
                 Languages = JsonSerializer.Serialize(dto.Languages ?? new List<string>()),
                 IsPhoneVerified = dto.IsPhoneVerified,
                 IsEmailVerified = dto.IsEmailVerified,

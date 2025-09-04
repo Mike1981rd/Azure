@@ -31,13 +31,13 @@ namespace WebsiteBuilderAPI.Models
         
         [Phone]
         [StringLength(20)]
-        public string PhoneNumber { get; set; }
+        public string? PhoneNumber { get; set; }
         
         [StringLength(500)]
-        public string ProfilePicture { get; set; } // URL de la imagen
+        public string? ProfilePicture { get; set; } // URL de la imagen
         
         [StringLength(500)]
-        public string Bio { get; set; } // Descripción personal
+        public string? Bio { get; set; } // Descripción personal
         
         public DateTime JoinedDate { get; set; }
         
@@ -50,10 +50,10 @@ namespace WebsiteBuilderAPI.Models
         public string AboutMe { get; set; } // Bio extendida/Acerca de mí
         
         [StringLength(200)]
-        public string Location { get; set; } // Dónde vive (ej: "Madrid, España")
+        public string? Location { get; set; } // Dónde vive (ej: "Madrid, España")
         
         [StringLength(100)]
-        public string Work { get; set; } // A qué se dedica
+        public string? Work { get; set; } // A qué se dedica
         
         [Column(TypeName = "jsonb")]
         public string Attributes { get; set; } // JSON array de virtudes/características (ej: ["Amigable", "Puntual", "Comunicativo"])
