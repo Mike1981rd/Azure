@@ -301,19 +301,34 @@ namespace WebsiteBuilderAPI.Services
             {
                 try
                 {
-                    items = JsonSerializer.Deserialize<List<MenuItemDto>>(menu.Items) ?? new List<MenuItemDto>();
+                    var options = new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true,
+                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                    };
+                    
+                    items = JsonSerializer.Deserialize<List<MenuItemDto>>(menu.Items, options) ?? new List<MenuItemDto>();
                     
                     // Crear resumen de elementos para la lista (primeros 3 elementos)
-                    var labels = items.Take(3).Select(i => i.Label).ToList();
+                    var labels = items.Take(3).Select(i => i.Label ?? "Untitled").ToList();
                     itemsSummary = string.Join(", ", labels);
                     if (items.Count > 3)
                         itemsSummary += $" +{items.Count - 3} more";
                 }
-                catch (Exception)
+                catch (JsonException jsonEx)
                 {
-                    // Si hay error al deserializar, devolver lista vacía
+                    // Log the actual JSON error for debugging
+                    Console.WriteLine($"JSON Deserialization error for menu {menu.Id}: {jsonEx.Message}");
+                    Console.WriteLine($"JSON content: {menu.Items}");
                     items = new List<MenuItemDto>();
                     itemsSummary = "Invalid menu data";
+                }
+                catch (Exception ex)
+                {
+                    // Log general errors
+                    Console.WriteLine($"Error mapping menu {menu.Id}: {ex.Message}");
+                    items = new List<MenuItemDto>();
+                    itemsSummary = "Error loading menu";
                 }
             }
 
@@ -321,9 +336,9 @@ namespace WebsiteBuilderAPI.Services
             {
                 Id = menu.Id,
                 CompanyId = menu.CompanyId,
-                Name = menu.Name,
-                Identifier = menu.Identifier,
-                MenuType = menu.MenuType,
+                Name = menu.Name ?? "Unnamed Menu",
+                Identifier = menu.Identifier ?? $"menu-{menu.Id}",
+                MenuType = menu.MenuType ?? "header",
                 Items = items,
                 IsActive = menu.IsActive,
                 CreatedAt = menu.CreatedAt,

@@ -77,16 +77,49 @@ namespace WebsiteBuilderAPI.Controllers
                 // For now, we'll use company 1 as default
                 int companyId = 1;
 
+                _logger.LogInformation("Getting public navigation menu {MenuId} for company {CompanyId}", id, companyId);
+
                 var menu = await _navigationMenuService.GetByIdAsync(companyId, id);
                 if (menu == null)
-                    return NotFound(new { error = "Navigation menu not found" });
+                {
+                    _logger.LogWarning("Navigation menu {MenuId} not found for company {CompanyId}", id, companyId);
+                    // Return empty menu structure to avoid breaking the frontend
+                    return Ok(new NavigationMenuResponseDto
+                    {
+                        Id = id,
+                        CompanyId = companyId,
+                        Name = "Default Menu",
+                        Identifier = "default",
+                        MenuType = "header",
+                        Items = new List<MenuItemDto>(),
+                        IsActive = true,
+                        ItemCount = 0,
+                        ItemsSummary = string.Empty,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    });
+                }
 
                 return Ok(menu);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting public navigation menu {MenuId}", id);
-                return StatusCode(500, new { error = "An error occurred while getting the navigation menu" });
+                _logger.LogError(ex, "Error getting public navigation menu {MenuId}. Exception: {Message}", id, ex.Message);
+                // Return empty menu structure to avoid breaking the frontend
+                return Ok(new NavigationMenuResponseDto
+                {
+                    Id = id,
+                    CompanyId = 1,
+                    Name = "Default Menu",
+                    Identifier = "default",
+                    MenuType = "header",
+                    Items = new List<MenuItemDto>(),
+                    IsActive = true,
+                    ItemCount = 0,
+                    ItemsSummary = string.Empty,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                });
             }
         }
 
