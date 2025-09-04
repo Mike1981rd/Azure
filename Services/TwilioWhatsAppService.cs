@@ -482,16 +482,38 @@ namespace WebsiteBuilderAPI.Services
 
         public async Task<List<WhatsAppMessageDto>> GetMessagesAsync(int companyId, Guid conversationId, int page = 1, int pageSize = 50)
         {
+            // Read-only fast path: avoid heavy includes and trackless query
             var messages = await _context.Set<WhatsAppMessage>()
-                .Include(m => m.Customer)
-                .Include(m => m.RepliedByUser)
+                .AsNoTracking()
                 .Where(m => m.ConversationId == conversationId && m.CompanyId == companyId)
                 .OrderByDescending(m => m.Timestamp)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
+                .Select(m => new WhatsAppMessageDto
+                {
+                    Id = m.Id,
+                    TwilioSid = m.TwilioSid,
+                    From = m.From,
+                    To = m.To,
+                    Body = m.Body,
+                    MessageType = m.MessageType,
+                    MediaUrl = m.MediaUrl,
+                    MediaContentType = m.MediaContentType,
+                    Direction = m.Direction,
+                    Status = m.Status,
+                    ErrorCode = m.ErrorCode,
+                    ErrorMessage = m.ErrorMessage,
+                    ConversationId = m.ConversationId,
+                    CustomerId = m.CustomerId,
+                    // CustomerName intentionally omitted to avoid join; UI does not require it
+                    RepliedByUserId = m.RepliedByUserId,
+                    Timestamp = m.Timestamp,
+                    DeliveredAt = m.DeliveredAt,
+                    ReadAt = m.ReadAt,
+                })
                 .ToListAsync();
 
-            return messages.Select(MapToMessageDto).ToList();
+            return messages;
         }
 
         public async Task<bool> MarkMessageAsReadAsync(int companyId, Guid messageId)
@@ -664,7 +686,7 @@ namespace WebsiteBuilderAPI.Services
             try
             {
                 var query = _context.Set<WhatsAppConversation>()
-                    .Include(c => c.Messages)
+                    .AsNoTracking()
                     .Where(c => c.CompanyId == companyId);
 
                 // Apply filters
@@ -728,15 +750,16 @@ namespace WebsiteBuilderAPI.Services
             try
             {
                 var conversation = await _context.Set<WhatsAppConversation>()
-                    .Include(c => c.Messages.OrderByDescending(m => m.Timestamp))
-                    .Include(c => c.AssignedUser)
-                    .Include(c => c.Customer)
+                    .AsNoTracking()
                     .FirstOrDefaultAsync(c => c.Id == conversationId && c.CompanyId == companyId);
 
                 if (conversation == null)
                     return null;
 
-                var messages = conversation.Messages
+                // Load last 50 messages (descending then reshape ascending if needed by client)
+                var messages = await _context.Set<WhatsAppMessage>()
+                    .AsNoTracking()
+                    .Where(m => m.ConversationId == conversationId && m.CompanyId == companyId)
                     .OrderByDescending(m => m.Timestamp)
                     .Take(50)
                     .Select(m => new WhatsAppMessageDto
@@ -754,9 +777,9 @@ namespace WebsiteBuilderAPI.Services
                         DeliveredAt = m.DeliveredAt,
                         ReadAt = m.ReadAt,
                         ConversationId = m.ConversationId,
-                        CustomerId = conversation.CustomerId,
-                        CustomerName = conversation.Customer != null ? $"{conversation.Customer.FirstName} {conversation.Customer.LastName}" : null
-                    }).ToList();
+                        CustomerId = conversation.CustomerId
+                    })
+                    .ToListAsync();
 
                 return new WhatsAppConversationDetailDto 
                 { 
@@ -768,7 +791,7 @@ namespace WebsiteBuilderAPI.Services
                         CustomerPhone = conversation.CustomerPhone,
                         BusinessPhone = conversation.BusinessPhone,
                         CustomerId = conversation.CustomerId,
-                        CustomerName = conversation.Customer != null ? $"{conversation.Customer.FirstName} {conversation.Customer.LastName}" : null,
+                        CustomerName = conversation.CustomerName,
                         Status = conversation.Status,
                         UnreadCount = conversation.UnreadCount,
                         LastMessageAt = conversation.LastMessageAt,

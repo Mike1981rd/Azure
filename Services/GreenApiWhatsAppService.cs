@@ -724,6 +724,20 @@ namespace WebsiteBuilderAPI.Services
                     return quick;
                 }
 
+                // No DB messages yet: trigger provider fetch in background and return immediately to keep UI responsive
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        using var ctsQuick = new CancellationTokenSource(TimeSpan.FromSeconds(8));
+                        var fresh = await FetchMessagesFromGreenApiAsync(config, conversation, conversationId, pageSize, ctsQuick.Token);
+                        if (fresh.Count > 0)
+                            _msgCache[(companyId, conversationId)] = (DateTime.UtcNow, fresh.OrderBy(m => m.Timestamp).ToList());
+                    }
+                    catch { }
+                });
+                return new List<WhatsAppMessageDto>();
+
                 // Build Green API chatId from customer phone
                 var digits = new string((conversation.CustomerPhone ?? "").Where(char.IsDigit).ToArray());
                 if (string.IsNullOrEmpty(digits))
