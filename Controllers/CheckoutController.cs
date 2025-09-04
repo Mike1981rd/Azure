@@ -23,6 +23,7 @@ namespace WebsiteBuilderAPI.Controllers
         private readonly ICustomerService _customerService;
         private readonly IReservationService _reservationService;
         private readonly IEmailService _emailService;
+        private readonly IAvailabilityService _availabilityService;
         private readonly ICompanyService _companyService;
         private readonly ILogger<CheckoutController> _logger;
 
@@ -31,6 +32,7 @@ namespace WebsiteBuilderAPI.Controllers
             ICustomerService customerService,
             IReservationService reservationService,
             IEmailService emailService,
+            IAvailabilityService availabilityService,
             ICompanyService companyService,
             ILogger<CheckoutController> logger)
         {
@@ -38,6 +40,7 @@ namespace WebsiteBuilderAPI.Controllers
             _customerService = customerService;
             _reservationService = reservationService;
             _emailService = emailService;
+            _availabilityService = availabilityService;
             _companyService = companyService;
             _logger = logger;
         }
@@ -610,8 +613,16 @@ namespace WebsiteBuilderAPI.Controllers
                         _logger.LogWarning(ex, "Failed to upsert customer payment method for customer {CustomerId}", customer.Id);
                     }
 
-                    // Step 4: Update room availability calendar
-                    await UpdateRoomAvailability(dto.RoomId, dto.CheckInDate, dto.CheckOutDate);
+                    // Step 4: Update room availability calendar (sync with confirmed reservations)
+                    try
+                    {
+                        await _availabilityService.SyncAvailabilityWithReservationsAsync(companyId);
+                    }
+                    catch (Exception syncEx)
+                    {
+                        _logger.LogWarning(syncEx, "Availability sync failed after confirming reservation {ReservationId}", reservation.Id);
+                        // Non-blocking: don't fail the reservation if sync fails; widget will still fetch from Reservations
+                    }
 
                     // Step 5: Send confirmation emails
                     await SendReservationConfirmation(customer.Email, reservation, room);
