@@ -12,16 +12,18 @@ namespace WebsiteBuilderAPI.Controllers
     {
         private readonly IWebHostEnvironment _environment;
         private readonly IConfiguration _configuration;
+        private readonly WebsiteBuilderAPI.Services.Storage.IStorageService _storage;
 
         // Supported formats
         private readonly string[] _allowedImageExtensions = { ".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg", ".avif" };
         private readonly string[] _allowedVideoExtensions = { ".mp4", ".webm", ".ogg", ".mov", ".avi" };
         private readonly long _maxFileSize = 50 * 1024 * 1024; // 50MB
 
-        public MediaUploadController(IWebHostEnvironment environment, IConfiguration configuration)
+        public MediaUploadController(IWebHostEnvironment environment, IConfiguration configuration, WebsiteBuilderAPI.Services.Storage.IStorageService storage)
         {
             _environment = environment;
             _configuration = configuration;
+            _storage = storage;
         }
 
         [HttpPost("image")]
@@ -41,30 +43,11 @@ namespace WebsiteBuilderAPI.Controllers
 
             try
             {
-                var uploadPath = Path.Combine(_environment.WebRootPath, "uploads", "images");
-                Directory.CreateDirectory(uploadPath);
-
-                var fileName = $"{Guid.NewGuid()}{extension}";
-                var filePath = Path.Combine(uploadPath, fileName);
-
-                using (var stream = new FileStream(filePath, FileMode.Create))
-                {
-                    await file.CopyToAsync(stream);
-                }
-
-                // Optimize image if needed (optional - requires ImageSharp or similar)
-                // await OptimizeImage(filePath);
-
-                var baseUrl = $"{Request.Scheme}://{Request.Host}";
-                var fileUrl = $"{baseUrl}/uploads/images/{fileName}";
-
-                return Ok(new 
-                { 
-                    url = fileUrl,
-                    fileName = fileName,
-                    size = file.Length,
-                    type = "image"
-                });
+                await using var ms = new MemoryStream();
+                await file.CopyToAsync(ms);
+                ms.Position = 0;
+                var url = await _storage.UploadAsync(ms, $"{Guid.NewGuid()}{extension}", file.ContentType, "images");
+                return Ok(new { url, fileName = Path.GetFileName(url), size = file.Length, type = "image" });
             }
             catch (Exception ex)
             {
@@ -89,27 +72,11 @@ namespace WebsiteBuilderAPI.Controllers
 
             try
             {
-                var uploadPath = Path.Combine(_environment.WebRootPath, "uploads", "videos");
-                Directory.CreateDirectory(uploadPath);
-
-                var fileName = $"{Guid.NewGuid()}{extension}";
-                var filePath = Path.Combine(uploadPath, fileName);
-
-                using (var stream = new FileStream(filePath, FileMode.Create))
-                {
-                    await file.CopyToAsync(stream);
-                }
-
-                var baseUrl = $"{Request.Scheme}://{Request.Host}";
-                var fileUrl = $"{baseUrl}/uploads/videos/{fileName}";
-
-                return Ok(new 
-                { 
-                    url = fileUrl,
-                    fileName = fileName,
-                    size = file.Length,
-                    type = "video"
-                });
+                await using var ms = new MemoryStream();
+                await file.CopyToAsync(ms);
+                ms.Position = 0;
+                var url = await _storage.UploadAsync(ms, $"{Guid.NewGuid()}{extension}", file.ContentType, "videos");
+                return Ok(new { url, fileName = Path.GetFileName(url), size = file.Length, type = "video" });
             }
             catch (Exception ex)
             {
@@ -144,19 +111,12 @@ namespace WebsiteBuilderAPI.Controllers
         }
 
         [HttpDelete("{type}/{fileName}")]
-        public IActionResult DeleteMedia(string type, string fileName)
+        public async Task<IActionResult> DeleteMedia(string type, string fileName)
         {
             try
             {
-                var uploadPath = Path.Combine(_environment.WebRootPath, "uploads", type);
-                var filePath = Path.Combine(uploadPath, fileName);
-
-                if (System.IO.File.Exists(filePath))
-                {
-                    System.IO.File.Delete(filePath);
-                    return Ok(new { message = "File deleted successfully" });
-                }
-
+                var ok = await _storage.DeleteAsync(fileName, type);
+                if (ok) return Ok(new { message = "File deleted successfully" });
                 return NotFound(new { error = "File not found" });
             }
             catch (Exception ex)
@@ -166,54 +126,22 @@ namespace WebsiteBuilderAPI.Controllers
         }
 
         [HttpGet("list")]
-        public IActionResult ListMedia([FromQuery] string type = "all")
+        public async Task<IActionResult> ListMedia([FromQuery] string type = "all")
         {
             try
             {
-                var uploads = new List<object>();
-                var baseUrl = $"{Request.Scheme}://{Request.Host}";
-
+                var files = new List<object>();
                 if (type == "images" || type == "all")
                 {
-                    var imagePath = Path.Combine(_environment.WebRootPath, "uploads", "images");
-                    if (Directory.Exists(imagePath))
-                    {
-                        var imageFiles = Directory.GetFiles(imagePath)
-                            .Select(f => new FileInfo(f))
-                            .OrderByDescending(f => f.CreationTime)
-                            .Select(f => new
-                            {
-                                url = $"{baseUrl}/uploads/images/{f.Name}",
-                                fileName = f.Name,
-                                size = f.Length,
-                                type = "image",
-                                createdAt = f.CreationTime
-                            });
-                        uploads.AddRange(imageFiles);
-                    }
+                    var urls = await _storage.ListAsync("images", 100);
+                    files.AddRange(urls.Select(u => new { url = u, fileName = Path.GetFileName(u), type = "image" }));
                 }
-
                 if (type == "videos" || type == "all")
                 {
-                    var videoPath = Path.Combine(_environment.WebRootPath, "uploads", "videos");
-                    if (Directory.Exists(videoPath))
-                    {
-                        var videoFiles = Directory.GetFiles(videoPath)
-                            .Select(f => new FileInfo(f))
-                            .OrderByDescending(f => f.CreationTime)
-                            .Select(f => new
-                            {
-                                url = $"{baseUrl}/uploads/videos/{f.Name}",
-                                fileName = f.Name,
-                                size = f.Length,
-                                type = "video",
-                                createdAt = f.CreationTime
-                            });
-                        uploads.AddRange(videoFiles);
-                    }
+                    var urls = await _storage.ListAsync("videos", 100);
+                    files.AddRange(urls.Select(u => new { url = u, fileName = Path.GetFileName(u), type = "video" }));
                 }
-
-                return Ok(new { files = uploads });
+                return Ok(new { files });
             }
             catch (Exception ex)
             {

@@ -205,6 +205,18 @@ try
     builder.Services.AddScoped<IRoleService, RoleService>();
     builder.Services.AddScoped<IPermissionService, PermissionService>();
     builder.Services.AddScoped<IUploadService, UploadService>();
+    // Configure storage provider (Cloudinary or Local)
+    var storageProvider = builder.Configuration["Storage:Provider"] ?? Environment.GetEnvironmentVariable("STORAGE__PROVIDER") ?? "local";
+    if (string.Equals(storageProvider, "cloudinary", StringComparison.OrdinalIgnoreCase))
+    {
+        Log.Information("Using Cloudinary storage provider");
+        builder.Services.AddSingleton<WebsiteBuilderAPI.Services.Storage.IStorageService, WebsiteBuilderAPI.Services.Storage.CloudinaryStorageService>();
+    }
+    else
+    {
+        Log.Information("Using Local storage provider");
+        builder.Services.AddSingleton<WebsiteBuilderAPI.Services.Storage.IStorageService, WebsiteBuilderAPI.Services.Storage.LocalStorageService>();
+    }
     builder.Services.AddScoped<IShippingService, ShippingService>();
     builder.Services.AddScoped<ILocationService, LocationService>();
     builder.Services.AddScoped<INotificationSettingsService, NotificationSettingsService>();

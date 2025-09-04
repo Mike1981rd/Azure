@@ -10,15 +10,17 @@ namespace WebsiteBuilderAPI.Controllers
     public class PublicMediaUploadController : ControllerBase
     {
         private readonly IWebHostEnvironment _environment;
+        private readonly WebsiteBuilderAPI.Services.Storage.IStorageService _storage;
 
         private readonly string[] _allowedImageExtensions = { ".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg", ".avif" };
         private readonly string[] _allowedVideoExtensions = { ".mp4", ".webm", ".ogg", ".mov", ".avi" };
         private readonly long _maxImageSize = 10 * 1024 * 1024; // 10MB
         private readonly long _maxVideoSize = 100 * 1024 * 1024; // 100MB
 
-        public PublicMediaUploadController(IWebHostEnvironment environment)
+        public PublicMediaUploadController(IWebHostEnvironment environment, WebsiteBuilderAPI.Services.Storage.IStorageService storage)
         {
             _environment = environment;
+            _storage = storage;
         }
 
         [HttpPost("media")]
@@ -52,18 +54,12 @@ namespace WebsiteBuilderAPI.Controllers
         {
             try
             {
-                var uploadPath = Path.Combine(_environment.WebRootPath, "uploads", folder);
-                Directory.CreateDirectory(uploadPath);
                 var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
-                var name = $"{Guid.NewGuid()}{ext}";
-                var path = Path.Combine(uploadPath, name);
-                using (var stream = new FileStream(path, FileMode.Create))
-                {
-                    await file.CopyToAsync(stream);
-                }
-                var baseUrl = $"{Request.Scheme}://{Request.Host}";
-                var url = $"{baseUrl}/uploads/{folder}/{name}";
-                return Ok(new { url, fileName = name, size = file.Length, type });
+                await using var ms = new MemoryStream();
+                await file.CopyToAsync(ms);
+                ms.Position = 0;
+                var url = await _storage.UploadAsync(ms, $"{Guid.NewGuid()}{ext}", file.ContentType, folder);
+                return Ok(new { url, fileName = Path.GetFileName(url), size = file.Length, type });
             }
             catch (Exception ex)
             {
@@ -72,4 +68,3 @@ namespace WebsiteBuilderAPI.Controllers
         }
     }
 }
-

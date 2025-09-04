@@ -15,32 +15,25 @@ namespace WebsiteBuilderAPI.Services
         private readonly IWebHostEnvironment _environment;
         private readonly ILogger<UploadService> _logger;
         private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly WebsiteBuilderAPI.Services.Storage.IStorageService _storage;
 
         public UploadService(
             IWebHostEnvironment environment,
             ILogger<UploadService> logger,
-            IHttpContextAccessor httpContextAccessor)
+            IHttpContextAccessor httpContextAccessor,
+            WebsiteBuilderAPI.Services.Storage.IStorageService storage)
         {
             _environment = environment;
             _logger = logger;
             _httpContextAccessor = httpContextAccessor;
+            _storage = storage;
         }
 
         public async Task<string> UploadAvatarAsync(IFormFile file)
         {
             try
             {
-                // Create avatars directory if it doesn't exist
-                var uploadsFolder = Path.Combine(_environment.WebRootPath ?? _environment.ContentRootPath, "uploads", "avatars");
-                if (!Directory.Exists(uploadsFolder))
-                {
-                    Directory.CreateDirectory(uploadsFolder);
-                }
-
-                // Generate unique filename (always save as .jpg after processing)
                 var uniqueFileName = $"{Guid.NewGuid()}.jpg";
-                var filePath = Path.Combine(uploadsFolder, uniqueFileName);
-
                 // Process image with ImageSharp to fix orientation
                 using (var inputStream = file.OpenReadStream())
                 using (var image = await Image.LoadAsync(inputStream))
@@ -61,16 +54,13 @@ namespace WebsiteBuilderAPI.Services
                         Quality = 85
                     };
                     
-                    await image.SaveAsync(filePath, encoder);
+                    await using var ms = new MemoryStream();
+                    await image.SaveAsync(ms, encoder);
+                    ms.Position = 0;
+                    var url = await _storage.UploadAsync(ms, uniqueFileName, "image/jpeg", "avatars");
+                    _logger.LogInformation($"Avatar uploaded and processed successfully: {url}");
+                    return url;
                 }
-
-                // Return full URL
-                var request = _httpContextAccessor.HttpContext?.Request;
-                var baseUrl = $"{request?.Scheme}://{request?.Host}";
-                var fileUrl = $"{baseUrl}/uploads/avatars/{uniqueFileName}";
-
-                _logger.LogInformation($"Avatar uploaded and processed successfully: {fileUrl}");
-                return fileUrl;
             }
             catch (Exception ex)
             {
@@ -83,13 +73,6 @@ namespace WebsiteBuilderAPI.Services
         {
             try
             {
-                // Crear directorio de uploads si no existe
-                var uploadsFolder = Path.Combine(_environment.WebRootPath ?? _environment.ContentRootPath, "uploads", "logos");
-                if (!Directory.Exists(uploadsFolder))
-                {
-                    Directory.CreateDirectory(uploadsFolder);
-                }
-
                 // Obtener la extensión original del archivo
                 var originalExtension = Path.GetExtension(file.FileName).ToLower();
                 if (string.IsNullOrEmpty(originalExtension))
@@ -108,17 +91,15 @@ namespace WebsiteBuilderAPI.Services
 
                 // Generar nombre único manteniendo la extensión original
                 var uniqueFileName = $"{Guid.NewGuid()}{originalExtension}";
-                var filePath = Path.Combine(uploadsFolder, uniqueFileName);
-
                 // OPCIÓN 1: Guardar SIN PROCESAR para PNG (mantiene transparencia garantizada)
                 if (originalExtension == ".png")
                 {
-                    // Guardar el PNG tal cual, sin procesamiento
-                    using (var stream = new FileStream(filePath, FileMode.Create))
-                    {
-                        await file.CopyToAsync(stream);
-                    }
-                    _logger.LogInformation($"PNG guardado sin procesamiento para preservar transparencia");
+                    await using var ms = new MemoryStream();
+                    await file.CopyToAsync(ms);
+                    ms.Position = 0;
+                    var url = await _storage.UploadAsync(ms, uniqueFileName, "image/png", "logos");
+                    _logger.LogInformation($"PNG uploaded without processing to preserve transparency");
+                    return url;
                 }
                 else
                 {
@@ -135,18 +116,14 @@ namespace WebsiteBuilderAPI.Services
                             image.Mutate(x => x.Resize(1920, 0));
                         }
                         
-                        // Guardar con encoder por defecto según extensión
-                        await image.SaveAsync(filePath);
+                        await using var ms2 = new MemoryStream();
+                        await image.SaveAsync(ms2);
+                        ms2.Position = 0;
+                        var url = await _storage.UploadAsync(ms2, uniqueFileName, file.ContentType, "logos");
+                        _logger.LogInformation($"Imagen subida exitosamente: {url}");
+                        return url;
                     }
                 }
-
-                // Retornar la URL completa
-                var request = _httpContextAccessor.HttpContext?.Request;
-                var baseUrl = $"{request?.Scheme}://{request?.Host}";
-                var fileUrl = $"{baseUrl}/uploads/logos/{uniqueFileName}";
-
-                _logger.LogInformation($"Imagen subida exitosamente: {fileUrl}");
-                return fileUrl;
             }
             catch (Exception ex)
             {
@@ -175,13 +152,8 @@ namespace WebsiteBuilderAPI.Services
                     fileName = Path.GetFileName(fileUrl);
                 }
                 
-                var filePath = Path.Combine(_environment.WebRootPath ?? _environment.ContentRootPath, "uploads", "logos", fileName);
-
-                if (File.Exists(filePath))
-                {
-                    await Task.Run(() => File.Delete(filePath));
-                    _logger.LogInformation($"Imagen eliminada: {filePath}");
-                }
+                await _storage.DeleteAsync(fileUrl, "logos");
+                _logger.LogInformation($"Imagen eliminada: {fileUrl}");
             }
             catch (Exception ex)
             {
