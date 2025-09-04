@@ -55,7 +55,7 @@ namespace WebsiteBuilderAPI.Services
                     };
                     
                     await using var ms = new MemoryStream();
-                    await image.SaveAsync(ms, encoder);
+                    await image.SaveAsJpegAsync(ms, encoder);
                     ms.Position = 0;
                     var url = await _storage.UploadAsync(ms, uniqueFileName, "image/jpeg", "avatars");
                     _logger.LogInformation($"Avatar uploaded and processed successfully: {url}");
@@ -116,9 +116,30 @@ namespace WebsiteBuilderAPI.Services
                             image.Mutate(x => x.Resize(1920, 0));
                         }
                         
-                        await using var ms2 = new MemoryStream();
-                        await image.SaveAsync(ms2);
-                        ms2.Position = 0;
+                    await using var ms2 = new MemoryStream();
+                    // Choose encoder based on extension
+                    var lower = originalExtension.ToLowerInvariant();
+                    if (lower == ".jpg" || lower == ".jpeg")
+                    {
+                        var enc = new JpegEncoder { Quality = 85 };
+                        await image.SaveAsJpegAsync(ms2, enc);
+                    }
+                    else if (lower == ".webp")
+                    {
+                        var enc = new WebpEncoder { Quality = 85 };
+                        await image.SaveAsWebpAsync(ms2, enc);
+                    }
+                    else if (lower == ".gif")
+                    {
+                        var enc = new GifEncoder();
+                        await image.SaveAsGifAsync(ms2, enc);
+                    }
+                    else
+                    {
+                        var enc = new JpegEncoder { Quality = 85 };
+                        await image.SaveAsJpegAsync(ms2, enc);
+                    }
+                    ms2.Position = 0;
                         var url = await _storage.UploadAsync(ms2, uniqueFileName, file.ContentType, "logos");
                         _logger.LogInformation($"Imagen subida exitosamente: {url}");
                         return url;
