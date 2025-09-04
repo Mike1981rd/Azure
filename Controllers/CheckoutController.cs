@@ -248,8 +248,19 @@ namespace WebsiteBuilderAPI.Controllers
                 // Step 1: Create or update customer
                 _logger.LogInformation("Processing customer for email: {Email}", dto.Email);
                 
-                var customer = await _context.Customers
-                    .FirstOrDefaultAsync(c => c.Email == dto.Email && c.CompanyId == companyId);
+                // Find existing customer by email (case-insensitive). Fallback to phone if email missing.
+                var normalizedEmail = dto.Email?.Trim().ToLower();
+                Customer? customer = null;
+                if (!string.IsNullOrWhiteSpace(normalizedEmail))
+                {
+                    customer = await _context.Customers
+                        .FirstOrDefaultAsync(c => c.CompanyId == companyId && c.Email.ToLower() == normalizedEmail);
+                }
+                if (customer == null && !string.IsNullOrWhiteSpace(dto.Phone))
+                {
+                    customer = await _context.Customers
+                        .FirstOrDefaultAsync(c => c.CompanyId == companyId && c.Phone == dto.Phone);
+                }
 
                 bool accountCreated = false;
                 bool passwordEmailSent = false;
