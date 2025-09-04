@@ -142,6 +142,7 @@ namespace WebsiteBuilderAPI.Services
                 // Ensure we never send nulls even if UI doesn't collect them
                 Location = string.Empty,
                 Work = string.Empty,
+                AboutMe = string.Empty,
                 Languages = JsonSerializer.Serialize(dto.Languages ?? new List<string>()),
                 IsPhoneVerified = dto.IsPhoneVerified,
                 IsEmailVerified = dto.IsEmailVerified,
