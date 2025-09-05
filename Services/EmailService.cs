@@ -1,7 +1,14 @@
 using System;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Text;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
+using WebsiteBuilderAPI.Data;
+using WebsiteBuilderAPI.Models;
 
 namespace WebsiteBuilderAPI.Services
 {
@@ -9,11 +16,22 @@ namespace WebsiteBuilderAPI.Services
     {
         private readonly ILogger<EmailService> _logger;
         private readonly IConfiguration _configuration;
+        private readonly IHttpClientFactory _httpClientFactory;
+        private readonly ApplicationDbContext _context;
+        private readonly IEncryptionService _encryptionService;
 
-        public EmailService(ILogger<EmailService> logger, IConfiguration configuration)
+        public EmailService(
+            ILogger<EmailService> logger,
+            IConfiguration configuration,
+            IHttpClientFactory httpClientFactory,
+            ApplicationDbContext context,
+            IEncryptionService encryptionService)
         {
             _logger = logger;
             _configuration = configuration;
+            _httpClientFactory = httpClientFactory;
+            _context = context;
+            _encryptionService = encryptionService;
         }
 
         public async Task SendEmailAsync(string to, string subject, string htmlBody)
@@ -23,30 +41,76 @@ namespace WebsiteBuilderAPI.Services
 
         public async Task SendEmailAsync(string to, string subject, string htmlBody, string from)
         {
+            await SendEmailAsync(to, subject, htmlBody, from, null);
+        }
+
+        public async Task SendEmailAsync(string to, string subject, string htmlBody, string? from, IEnumerable<EmailAttachment>? attachments)
+        {
             try
             {
-                // In production, this would use an actual email service like SendGrid, Mailgun, or SMTP
-                // For now, we'll just log the email
-                
-                _logger.LogInformation("Email sent to {To}: {Subject}", to, subject);
-                _logger.LogDebug("Email body: {Body}", htmlBody);
-                
-                // Simulate async operation
-                await Task.Delay(100);
-                
-                // In production, you would implement actual email sending here:
-                // Example with SendGrid:
-                // var client = new SendGridClient(_configuration["SendGrid:ApiKey"]);
-                // var fromAddress = new EmailAddress(from ?? _configuration["Email:DefaultFrom"], _configuration["Email:DefaultFromName"]);
-                // var toAddress = new EmailAddress(to);
-                // var msg = MailHelper.CreateSingleEmail(fromAddress, toAddress, subject, null, htmlBody);
-                // var response = await client.SendEmailAsync(msg);
+                // Resolve provider from DB (single-tenant companyId = 1 for now)
+                var settings = await _context.Set<EmailProviderSettings>()
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(s => s.CompanyId == 1);
+
+                var provider = settings?.Provider?.Trim() ?? "Postmark";
+                if (!string.IsNullOrEmpty(provider) && provider.Equals("Postmark", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(settings?.ApiKey))
+                {
+                    await SendViaPostmarkAsync(_encryptionService.Decrypt(settings!.ApiKey!), to, subject, htmlBody, from ?? settings.FromEmail, settings.FromName, attachments);
+                    return;
+                }
+
+                // Fallback: log only
+                _logger.LogInformation("[Email Fallback] To={To} Subject={Subject} From={From}", to, subject, from ?? settings?.FromEmail ?? "(default)");
+                _logger.LogDebug("Body: {Body}", htmlBody);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to send email to {To}", to);
                 throw;
             }
+        }
+
+        private async Task SendViaPostmarkAsync(string apiToken, string to, string subject, string htmlBody, string? fromEmail, string? fromName, IEnumerable<EmailAttachment>? attachments)
+        {
+            var client = _httpClientFactory.CreateClient();
+            client.BaseAddress = new Uri("https://api.postmarkapp.com/");
+            client.DefaultRequestHeaders.Accept.Clear();
+            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            client.DefaultRequestHeaders.Add("X-Postmark-Server-Token", apiToken);
+
+            var from = !string.IsNullOrWhiteSpace(fromName) && !string.IsNullOrWhiteSpace(fromEmail)
+                ? $"{fromName} <{fromEmail}>" : (fromEmail ?? _configuration["Email:DefaultFrom"] ?? "no-reply@localhost");
+
+            var payload = new Dictionary<string, object?>
+            {
+                ["From"] = from,
+                ["To"] = to,
+                ["Subject"] = subject,
+                ["HtmlBody"] = htmlBody,
+                ["MessageStream"] = "outbound"
+            };
+
+            if (attachments != null)
+            {
+                payload["Attachments"] = attachments.Select(a => new Dictionary<string, object>
+                {
+                    ["Name"] = a.FileName,
+                    ["Content"] = Convert.ToBase64String(a.Content),
+                    ["ContentType"] = a.ContentType
+                }).ToList();
+            }
+
+            var json = JsonConvert.SerializeObject(payload);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+            var resp = await client.PostAsync("email", content);
+            if (!resp.IsSuccessStatusCode)
+            {
+                var body = await resp.Content.ReadAsStringAsync();
+                _logger.LogError("Postmark send failed: {Status} {Body}", (int)resp.StatusCode, body);
+                throw new InvalidOperationException($"Postmark send failed: {(int)resp.StatusCode}");
+            }
+            _logger.LogInformation("Email sent via Postmark to {To} - {Subject}", to, subject);
         }
 
         public async Task SendWelcomeEmailAsync(string email, string firstName)

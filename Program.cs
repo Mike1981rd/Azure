@@ -236,6 +236,8 @@ try
     builder.Services.AddScoped<IGlobalThemeConfigService, GlobalThemeConfigService>();
     builder.Services.AddScoped<IWebsiteBuilderService, WebsiteBuilderService>();
     builder.Services.AddScoped<IWebsiteBuilderCacheService, WebsiteBuilderCacheService>();
+    builder.Services.AddScoped<INotificationService, NotificationService>();
+    builder.Services.AddScoped<IReservationReceiptService, ReservationReceiptService>();
     
     // Register Structural Components services (Phase 2)
     builder.Services.AddScoped<IStructuralComponentsService, StructuralComponentsService>();
@@ -257,6 +259,7 @@ try
     builder.Services.AddScoped<IConfigOptionService, ConfigOptionService>();
     
     // Registrar servicio de Email
+    builder.Services.AddHttpClient();
     builder.Services.AddScoped<IEmailService, EmailService>();
     
     
@@ -626,6 +629,47 @@ BEGIN
   -- Helpful indexes
   CREATE INDEX IF NOT EXISTS ""IX_WhatsAppMessages_Source"" ON public.""WhatsAppMessages""(""Source"");
   CREATE INDEX IF NOT EXISTS ""IX_WhatsAppMessages_SessionId"" ON public.""WhatsAppMessages""(""SessionId"");
+
+  -- Notifications table (generic app notifications)
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.tables WHERE table_name='Notifications'
+  ) THEN
+    CREATE TABLE public.""Notifications"" (
+      ""Id"" serial PRIMARY KEY,
+      ""CompanyId"" int NOT NULL,
+      ""Type"" varchar(50) NOT NULL,
+      ""Title"" varchar(200) NOT NULL,
+      ""Message"" varchar(1000),
+      ""Data"" jsonb,
+      ""IsRead"" boolean NOT NULL DEFAULT false,
+      ""CreatedAt"" timestamp with time zone NOT NULL DEFAULT (now() at time zone 'utc'),
+      ""ReadAt"" timestamp with time zone,
+      ""RelatedEntityType"" varchar(50),
+      ""RelatedEntityId"" varchar(100)
+    );
+    CREATE INDEX IF NOT EXISTS ""IX_Notifications_CompanyId"" ON public.""Notifications""(""CompanyId"");
+    CREATE INDEX IF NOT EXISTS ""IX_Notifications_IsRead"" ON public.""Notifications""(""IsRead"");
+    CREATE INDEX IF NOT EXISTS ""IX_Notifications_CreatedAt"" ON public.""Notifications""(""CreatedAt"");
+  END IF;
+
+  -- Email Provider Settings table (per company)
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.tables WHERE table_name='EmailProviderSettings'
+  ) THEN
+    CREATE TABLE public.""EmailProviderSettings"" (
+      ""Id"" serial PRIMARY KEY,
+      ""CompanyId"" int NOT NULL,
+      ""Provider"" varchar(50) NOT NULL,
+      ""ApiKey"" varchar(1000),
+      ""ApiKeyMask"" varchar(120),
+      ""FromEmail"" varchar(255),
+      ""FromName"" varchar(255),
+      ""IsActive"" boolean NOT NULL DEFAULT true,
+      ""CreatedAt"" timestamp with time zone NOT NULL DEFAULT (now() at time zone 'utc'),
+      ""UpdatedAt"" timestamp with time zone NOT NULL DEFAULT (now() at time zone 'utc')
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS ""UX_EmailProviderSettings_Company"" ON public.""EmailProviderSettings""(""CompanyId"");
+  END IF;
 END $$;";
                             await cmd.ExecuteNonQueryAsync();
                         }

@@ -104,6 +104,8 @@ namespace WebsiteBuilderAPI.Data
         public DbSet<WhatsAppMessage> WhatsAppMessages { get; set; }
         public DbSet<WhatsAppConversation> WhatsAppConversations { get; set; }
         public DbSet<ContactMessage> ContactMessages { get; set; }
+        public DbSet<Notification> Notifications { get; set; }
+        public DbSet<EmailProviderSettings> EmailProviderSettings { get; set; }
         public DbSet<ContactNotificationSettings> ContactNotificationSettings { get; set; }
         
         // Published Snapshots for stable content delivery

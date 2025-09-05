@@ -415,6 +415,34 @@ namespace WebsiteBuilderAPI.Controllers
                     contactMessage.IsNotificationSent = true;
                     await _context.SaveChangesAsync();
                 }
+
+                // Send a copy to the customer (receipt of their message)
+                if (!string.IsNullOrWhiteSpace(contactMessage.Email))
+                {
+                    var customerBody = $@"
+                        <h2>Hemos recibido tu mensaje</h2>
+                        <p><strong>Nombre:</strong> {contactMessage.Name}</p>
+                        <p><strong>Tu mensaje:</strong></p>
+                        <p>{contactMessage.Message.Replace("\n", "<br>")}</p>
+                        <hr>
+                        <p><small>Enviado: {contactMessage.CreatedAt:yyyy-MM-dd HH:mm:ss} UTC</small></p>
+                    ";
+                    await _emailService.SendEmailAsync(contactMessage.Email, "Copia de tu mensaje", customerBody);
+                }
+
+                // App notification (bell)
+                try
+                {
+                    var notifier = HttpContext.RequestServices.GetRequiredService<INotificationService>();
+                    await notifier.CreateAsync(contactMessage.CompanyId,
+                        type: "contact_message",
+                        title: $"Nuevo mensaje de {contactMessage.Name}",
+                        message: contactMessage.Message.Length > 120 ? contactMessage.Message.Substring(0,120)+"..." : contactMessage.Message,
+                        data: new { contactMessage.Id, contactMessage.Email },
+                        relatedType: "contact_message",
+                        relatedId: contactMessage.Id.ToString());
+                }
+                catch { }
             }
             catch (Exception ex)
             {

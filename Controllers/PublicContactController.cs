@@ -17,13 +17,19 @@ namespace WebsiteBuilderAPI.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly ILogger<PublicContactController> _logger;
+        private readonly IEmailService _emailService;
+        private readonly INotificationService _notificationService;
 
         public PublicContactController(
             ApplicationDbContext context,
-            ILogger<PublicContactController> logger)
+            ILogger<PublicContactController> logger,
+            IEmailService emailService,
+            INotificationService notificationService)
         {
             _context = context;
             _logger = logger;
+            _emailService = emailService;
+            _notificationService = notificationService;
         }
 
         /// <summary>
@@ -104,6 +110,31 @@ namespace WebsiteBuilderAPI.Controllers
                 }
 
                 _logger.LogInformation("Contact message submitted from website for company {CompanyId}", dto.CompanyId);
+
+                // Emails
+                try
+                {
+                    // Send copy to customer
+                    var customerBody = $@"<h2>Hemos recibido tu mensaje</h2><p><strong>Nombre:</strong> {contactMessage.Name}</p><p><strong>Tu mensaje:</strong></p><p>{contactMessage.Message.Replace("\n", "<br>")}</p>";
+                    await _emailService.SendEmailAsync(contactMessage.Email, "Copia de tu mensaje", customerBody);
+
+                    // Send to company contact email if available
+                    var company = await _context.Companies.FirstOrDefaultAsync(c => c.Id == dto.CompanyId);
+                    var adminEmail = company?.ContactEmail ?? company?.SenderEmail;
+                    if (!string.IsNullOrWhiteSpace(adminEmail))
+                    {
+                        var adminBody = $@"<h2>Nuevo mensaje de contacto</h2><p><strong>Nombre:</strong> {contactMessage.Name}</p><p><strong>Email:</strong> {contactMessage.Email}</p>{(!string.IsNullOrEmpty(contactMessage.Phone) ? $"<p><strong>Phone:</strong> {contactMessage.Phone}</p>" : "")}<p><strong>Mensaje:</strong></p><p>{contactMessage.Message.Replace("\n", "<br>")}</p>";
+                        await _emailService.SendEmailAsync(adminEmail, "Nuevo mensaje de contacto", adminBody);
+                    }
+                }
+                catch { }
+
+                // Bell notification
+                try
+                {
+                    await _notificationService.CreateAsync(dto.CompanyId, "contact_message", $"Nuevo mensaje de {contactMessage.Name}", contactMessage.Message, new { contactMessage.Id, contactMessage.Email }, "contact_message", contactMessage.Id.ToString());
+                }
+                catch { }
 
                 // Return success without exposing internal details
                 return Ok(ApiResponse<object>.SuccessResponse(
