@@ -782,30 +782,25 @@ namespace WebsiteBuilderAPI.Controllers
                 var currentUserId = User?.Identity?.IsAuthenticated == true 
                     ? int.TryParse(User.FindFirst("userId")?.Value, out var id) ? id : (int?)null
                     : null;
-                
-                // Create payment record using only existing model properties
-                var payment = new ReservationPayment
+
+                // Determine companyId from header (same as in ProcessRoomReservation)
+                var companyIdHeader = Request.Headers["X-Company-Id"].FirstOrDefault();
+                int companyId = !string.IsNullOrEmpty(companyIdHeader)
+                    ? int.Parse(companyIdHeader)
+                    : 1; // Default company
+
+                // Use reservation service to add payment so downstream notifications and emails run
+                var createPayment = new WebsiteBuilderAPI.DTOs.CreatePaymentDto
                 {
-                    ReservationId = reservationId,
-                    Amount = dto.TotalAmount, // Using TotalAmount from dto
+                    Amount = dto.TotalAmount,
                     PaymentMethod = dto.PaymentMethod,
-                    Status = "Completed", // In production, this would depend on actual payment processing
-                    PaymentDate = DateTime.UtcNow,
                     TransactionId = $"TXN-{Guid.NewGuid().ToString().Substring(0, 8).ToUpper()}",
                     Notes = $"Payment for reservation #{reservationId:D6}. Method: {dto.PaymentMethod}. " +
-                           $"Card: ****{(dto.CardNumber?.Length >= 4 ? dto.CardNumber.Substring(dto.CardNumber.Length - 4) : "****")}",
-                    ProcessedByUserId = currentUserId
+                           $"Card: ****{(dto.CardNumber?.Length >= 4 ? dto.CardNumber.Substring(dto.CardNumber.Length - 4) : "****")}"
                 };
-                
-                _context.ReservationPayments.Add(payment);
-                await _context.SaveChangesAsync();
-                
-                // Simulate payment processing delay
-                await Task.Delay(500);
-                
-                // For testing, always return true
-                // In production, this would depend on the payment gateway response
-                return true;
+
+                var result = await _reservationService.AddPaymentAsync(reservationId, companyId, createPayment, currentUserId);
+                return result.Success;
             }
             catch (Exception ex)
             {

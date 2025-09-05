@@ -34,3 +34,31 @@
 
 ## Opcional
 - [ ] Registrar provider `Microsoft.App` si se evalúa Container Apps: `az provider register -n Microsoft.App --wait`.
+
+---
+
+## Website Builder — Pendientes actuales (Frontend/Backend)
+
+### Frontend (limpieza de 404 y robustez de medios)
+- [ ] Crear componente `SafeImage` (usa `getImageUrl` + `onError` con fallback) y reemplazar `<img>` directos en:
+  - [ ] Orders: lista y detalle (`/dashboard/orders` y `/dashboard/orders/[id]`)
+  - [ ] CustomerDetail (`/dashboard/clientes/[id]`)
+  - [ ] Módulos de editor con imágenes (ej. `PreviewImageWithText.tsx` y afines)
+- [ ] Verificar Navbar/otros que ya usan `<Avatar>` (ya normaliza) y ajustar donde queden rutas absolutas.
+- [ ] Confirmar `NEXT_PUBLIC_API_URL` en Vercel apunta al dominio del API actual.
+
+### Backend (persistencia y rutas de carga)
+- [ ] Refactor `CompanyService.UploadLogoAsync` para usar `IStorageService.UploadAsync` (evita `wwwroot` y asegura persistencia en disco/Cloudinary).
+- [ ] Verificar que el servicio en Render tenga disco persistente habilitado y que la variable `Storage:Local:Root` o `UPLOADS_ROOT_PATH` apunte a `/data`.
+- [ ] Opcional: habilitar `Storage:Provider=cloudinary` y setear credenciales (`Cloudinary:*`) para eliminar dependencia del filesystem.
+
+### Operación sin scripts invasivos
+- [ ] Re‑subir en PROD los assets críticos faltantes (logo de empresa/checkout, avatares) desde el panel para eliminar 404.
+- [ ] (Opcional) Agregar “Media Checker” en el backoffice: listar URLs de imagen que devuelvan 404 y permitir corregir/re‑subir individualmente.
+
+### CORS y dominios
+- [ ] Preparar lista configurable de orígenes permitidos (appsettings/variables) para nuevo dominio del cliente; documentar el cambio.
+
+### Validación
+- [ ] Probar Disponibilidad en agosto y septiembre (grid + stats) y widget público `/api/availability/public/room/{id}`.
+- [ ] Prueba de checkout end‑to‑end: confirmación de reserva → sync de disponibilidad → calendario/iframe reflejan ocupación.

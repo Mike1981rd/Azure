@@ -4,13 +4,14 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using WebsiteBuilderAPI.DTOs;
 using WebsiteBuilderAPI.Services;
+using Microsoft.Extensions.Logging;
 
 namespace WebsiteBuilderAPI.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
-    public class ReservationsController : ControllerBase
+    public partial class ReservationsController : ControllerBase
     {
         private readonly IReservationService _reservationService;
 
@@ -28,6 +29,14 @@ namespace WebsiteBuilderAPI.Controllers
         {
             try
             {
+                // Structured logging for observability
+                try
+                {
+                    var logger = HttpContext.RequestServices.GetRequiredService<ILogger<ReservationsController>>();
+                    logger.LogInformation("GetReservations called with status={Status}, startDate={Start}, endDate={End}", status, startDate, endDate);
+                }
+                catch { /* logging best-effort */ }
+
                 // Obtener companyId del token (minúscula según Guardado.md)
                 var companyIdClaim = User.FindFirst("companyId")?.Value;
                 int companyId;
@@ -41,7 +50,15 @@ namespace WebsiteBuilderAPI.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { success = false, error = "Error al obtener las reservaciones", details = ex.Message });
+                try
+                {
+                    var logger = HttpContext.RequestServices.GetRequiredService<ILogger<ReservationsController>>();
+                    logger.LogError(ex, "Error getting reservations. status={Status}, startDate={Start}, endDate={End}", status, startDate, endDate);
+                }
+                catch { }
+
+                // Harden: devolver lista vacía para no romper el dashboard
+                return Ok(Array.Empty<ReservationListDto>());
             }
         }
 

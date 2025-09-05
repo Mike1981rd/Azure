@@ -12,10 +12,23 @@ namespace WebsiteBuilderAPI.Services
     public class ReservationService : IReservationService
     {
         private readonly ApplicationDbContext _context;
+        private readonly IEmailService _emailService;
+        private readonly IReservationReceiptService _receiptService;
+        private readonly INotificationService _notificationService;
+        private readonly IWhatsAppServiceFactory _whatsAppFactory;
 
-        public ReservationService(ApplicationDbContext context)
+        public ReservationService(
+            ApplicationDbContext context,
+            IEmailService emailService,
+            IReservationReceiptService receiptService,
+            INotificationService notificationService,
+            IWhatsAppServiceFactory whatsAppFactory)
         {
             _context = context;
+            _emailService = emailService;
+            _receiptService = receiptService;
+            _notificationService = notificationService;
+            _whatsAppFactory = whatsAppFactory;
         }
 
         public async Task<List<ReservationListDto>> GetReservationsByCompanyAsync(int companyId, string? status = null, DateTime? startDate = null, DateTime? endDate = null)
@@ -571,6 +584,63 @@ namespace WebsiteBuilderAPI.Services
 
                 _context.ReservationPayments.Add(payment);
                 await _context.SaveChangesAsync();
+
+                // Side-effects: send receipt email with PDF, WhatsApp notify, and app notification
+                try
+                {
+                    var full = await _context.Reservations
+                        .Include(r => r.Customer)
+                        .Include(r => r.Room)
+                        .FirstOrDefaultAsync(r => r.Id == reservationId && r.CompanyId == companyId);
+                    if (full != null && !string.IsNullOrEmpty(full.Customer.Email))
+                    {
+                        var pdf = await _receiptService.GenerateReceiptPdfAsync(reservationId, companyId);
+                        var attachment = new EmailAttachment
+                        {
+                            FileName = $"Reserva_{reservationId:D6}.pdf",
+                            ContentType = "application/pdf",
+                            Content = pdf
+                        };
+                        var subject = $"Confirmación de Reservación #{reservationId:D6}";
+                        var body = $@"
+                            <h2>¡Gracias por su pago!</h2>
+                            <p>Su reservación ha sido confirmada.</p>
+                            <p><strong>Habitación:</strong> {full.Room?.Name}</p>
+                            <p><strong>Fechas:</strong> {full.CheckInDate:yyyy-MM-dd} a {full.CheckOutDate:yyyy-MM-dd}</p>
+                            <p><strong>Total:</strong> $ {full.TotalAmount:F2}</p>
+                            <p>Adjuntamos su comprobante en PDF.</p>
+                        ";
+                        await _emailService.SendEmailAsync(full.Customer.Email, subject, body, null, new[] { attachment });
+                    }
+
+                    // WhatsApp notification to business phone
+                    try
+                    {
+                        var company = await _context.Companies.FirstOrDefaultAsync(c => c.Id == companyId);
+                        var adminPhone = company?.PhoneNumber;
+                        if (!string.IsNullOrWhiteSpace(adminPhone))
+                        {
+                            var wa = _whatsAppFactory.GetService();
+                            var msg = $"Nueva reservación pagada #{reservationId:D6}: {reservation.NumberOfNights} noche(s) en '{reservation.RoomId}'. Total $ {reservation.TotalAmount:F2}.";
+                            var waDto = new DTOs.WhatsApp.SendWhatsAppMessageDto { To = adminPhone, Body = msg };
+                            await wa.SendMessageAsync(companyId, waDto);
+                        }
+                    }
+                    catch { /* ignore WhatsApp errors here */ }
+
+                    // App notification (bell)
+                    await _notificationService.CreateAsync(companyId,
+                        type: "reservation_paid",
+                        title: $"Reservación #{reservationId:D6} pagada",
+                        message: $"Cliente: {reservation.CustomerId} • Total $ {reservation.TotalAmount:F2}",
+                        data: new { reservationId },
+                        relatedType: "reservation",
+                        relatedId: reservationId.ToString());
+                }
+                catch (Exception)
+                {
+                    // Errors in side-effects should not break payment recording; they are logged by the services
+                }
 
                 return new ReservationResponseDto
                 {

@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using WebsiteBuilderAPI.DTOs.NewsletterSubscribers;
 using WebsiteBuilderAPI.Services;
+using Microsoft.EntityFrameworkCore;
 
 namespace WebsiteBuilderAPI.Controllers
 {
@@ -9,10 +10,14 @@ namespace WebsiteBuilderAPI.Controllers
     public class PublicNewsletterController : ControllerBase
     {
         private readonly INewsletterSubscriberService _subscriberService;
+        private readonly IEmailService _emailService;
+        private readonly INotificationService _notificationService;
 
-        public PublicNewsletterController(INewsletterSubscriberService subscriberService)
+        public PublicNewsletterController(INewsletterSubscriberService subscriberService, IEmailService emailService, INotificationService notificationService)
         {
             _subscriberService = subscriberService;
+            _emailService = emailService;
+            _notificationService = notificationService;
         }
 
         /// <summary>
@@ -27,6 +32,37 @@ namespace WebsiteBuilderAPI.Controllers
                     return BadRequest(new { error = "Invalid data", details = ModelState });
 
                 var subscriber = await _subscriberService.PublicSubscribeAsync(dto);
+
+                // Emails: to subscriber and to admin (company contact)
+                try
+                {
+                    await _emailService.SendEmailAsync(
+                        subscriber.Email,
+                        "Gracias por suscribirte",
+                        $"<h2>¡Suscripción confirmada!</h2><p>Has sido suscrito al boletín de noticias.</p>");
+
+                    // Admin email
+                    var companyId = 1;
+                    // Try to fetch a contact email from company
+                    var db = HttpContext.RequestServices.GetRequiredService<WebsiteBuilderAPI.Data.ApplicationDbContext>();
+                    var company = await db.Companies.FirstOrDefaultAsync(c => c.Id == companyId);
+                    var adminEmail = company?.ContactEmail ?? company?.SenderEmail;
+                    if (!string.IsNullOrWhiteSpace(adminEmail))
+                    {
+                        await _emailService.SendEmailAsync(adminEmail,
+                            "Nueva suscripción",
+                            $"<p>Se ha suscrito: {subscriber.Email}</p>");
+                    }
+                }
+                catch { }
+
+                // App notification (bell)
+                try
+                {
+                    await _notificationService.CreateAsync(1, "subscription_new", "Nueva suscripción", $"Email: {subscriber.Email}", new { subscriber.Id, subscriber.Email }, "subscriber", subscriber.Id.ToString());
+                }
+                catch { }
+
                 return Ok(new 
                 { 
                     success = true, 
