@@ -9,57 +9,30 @@ namespace WebsiteBuilderAPI.Services
         private static string GetRoomImageHtml(Room? room)
         {
             if (room?.Images == null || !room.Images.Any())
-            {
-                Console.WriteLine($"[EMAIL DEBUG] Room {room?.Name ?? "null"} has no images");
                 return "";
-            }
 
             var firstImage = room.Images.First();
-            Console.WriteLine($"[EMAIL DEBUG] Room: {room.Name}, Original image URL: '{firstImage}'");
-            
-            // Si la imagen está vacía o es solo espacios
-            if (string.IsNullOrWhiteSpace(firstImage))
-            {
-                Console.WriteLine("[EMAIL DEBUG] Image URL is empty or whitespace");
-                return "";
-            }
-            
             var imageUrl = "";
-            var baseUrl = "https://websitebuilder-api-staging.onrender.com";
             
-            // Extraer path de uploads si existe
-            if (firstImage.Contains("/uploads/"))
+            if (firstImage.StartsWith("/"))
             {
-                var index = firstImage.IndexOf("/uploads/");
-                imageUrl = baseUrl + firstImage.Substring(index);
-                Console.WriteLine($"[EMAIL DEBUG] Extracted uploads path: {imageUrl}");
+                // Es path relativo, agregar dominio base
+                var apiUrl = Environment.GetEnvironmentVariable("API_URL") ?? "https://websitebuilder-api-staging.onrender.com";
+                imageUrl = $"{apiUrl}{firstImage}";
             }
-            else if (firstImage.StartsWith("/"))
+            else if (!firstImage.StartsWith("http"))
             {
-                imageUrl = baseUrl + firstImage;
-                Console.WriteLine($"[EMAIL DEBUG] Relative path converted: {imageUrl}");
-            }
-            else if (firstImage.StartsWith("http"))
-            {
-                imageUrl = firstImage;
-                Console.WriteLine($"[EMAIL DEBUG] Using full URL: {imageUrl}");
+                // No tiene protocolo, asumir que está en uploads
+                var apiUrl = Environment.GetEnvironmentVariable("API_URL") ?? "https://websitebuilder-api-staging.onrender.com";
+                imageUrl = $"{apiUrl}/uploads/{firstImage}";
             }
             else
             {
-                // Asumir que es solo el nombre del archivo
-                imageUrl = $"{baseUrl}/uploads/rooms/{firstImage}";
-                Console.WriteLine($"[EMAIL DEBUG] Filename only, built URL: {imageUrl}");
+                // Ya es URL completa
+                imageUrl = firstImage;
             }
-            
-            if (string.IsNullOrWhiteSpace(imageUrl))
-            {
-                Console.WriteLine("[EMAIL DEBUG] Final imageUrl is empty!");
-                return "";
-            }
-            
-            var html = $@"<img src='{imageUrl}' alt='{room.Name}' style='width: 100%; max-width: 600px; height: 200px; object-fit: cover; border-radius: 8px; margin-bottom: 15px;' />";
-            Console.WriteLine($"[EMAIL DEBUG] Final HTML length: {html.Length} chars");
-            return html;
+
+            return $@"<img src='{imageUrl}' alt='{room.Name}' style='width: 100%; height: 200px; object-fit: cover; border-radius: 8px; margin-bottom: 15px;' />";
         }
 
         public static string GenerateReservationConfirmationHtml(
