@@ -591,8 +591,9 @@ namespace WebsiteBuilderAPI.Services
                     var full = await _context.Reservations
                         .Include(r => r.Customer)
                         .Include(r => r.Room)
-                        .Include(r => r.Company)
                         .FirstOrDefaultAsync(r => r.Id == reservationId && r.CompanyId == companyId);
+                    
+                    var company = await _context.Companies.FirstOrDefaultAsync(c => c.Id == companyId);
                     
                     if (full != null)
                     {
@@ -610,25 +611,25 @@ namespace WebsiteBuilderAPI.Services
                             
                             // Use professional HTML template
                             var body = EmailTemplates.GenerateReservationConfirmationHtml(
-                                full, full.Customer, full.Room, full.Company, payment);
+                                full, full.Customer, full.Room, company ?? new Company(), payment);
                             
                             await _emailService.SendEmailAsync(full.Customer.Email, subject, body, null, new[] { attachment });
                         }
 
                         // Send email to admin with payment notification
-                        var adminEmail = full.Company?.ContactEmail ?? full.Company?.SenderEmail;
+                        var adminEmail = company?.ContactEmail ?? company?.SenderEmail;
                         if (!string.IsNullOrWhiteSpace(adminEmail))
                         {
                             var adminSubject = $"💰 Nuevo Pago Recibido - Reservación #{reservationId:D6}";
                             var adminBody = EmailTemplates.GenerateAdminPaymentNotificationHtml(
-                                full, full.Customer, full.Room, full.Company, payment);
+                                full, full.Customer, full.Room, company ?? new Company(), payment);
                             await _emailService.SendEmailAsync(adminEmail, adminSubject, adminBody);
                         }
 
                         // WhatsApp notification to business phone with improved format
                         try
                         {
-                            var adminPhone = full.Company?.PhoneNumber;
+                            var adminPhone = company?.PhoneNumber;
                             if (!string.IsNullOrWhiteSpace(adminPhone))
                             {
                                 var wa = _whatsAppFactory.GetService();
