@@ -6,6 +6,35 @@ namespace WebsiteBuilderAPI.Services
 {
     public static class EmailTemplates
     {
+        private static string GetRoomImageHtml(Room? room)
+        {
+            if (room?.Images == null || !room.Images.Any())
+                return "";
+
+            var firstImage = room.Images.First();
+            var imageUrl = "";
+            
+            if (firstImage.StartsWith("/"))
+            {
+                // Es path relativo, agregar dominio base
+                var apiUrl = Environment.GetEnvironmentVariable("API_URL") ?? "https://websitebuilder-api-staging.onrender.com";
+                imageUrl = $"{apiUrl}{firstImage}";
+            }
+            else if (!firstImage.StartsWith("http"))
+            {
+                // No tiene protocolo, asumir que está en uploads
+                var apiUrl = Environment.GetEnvironmentVariable("API_URL") ?? "https://websitebuilder-api-staging.onrender.com";
+                imageUrl = $"{apiUrl}/uploads/{firstImage}";
+            }
+            else
+            {
+                // Ya es URL completa
+                imageUrl = firstImage;
+            }
+
+            return $@"<img src='{imageUrl}' alt='{room.Name}' style='width: 100%; height: 200px; object-fit: cover; border-radius: 8px; margin-bottom: 15px;' />";
+        }
+
         public static string GenerateReservationConfirmationHtml(
             Reservation reservation,
             Customer customer,
@@ -56,9 +85,7 @@ namespace WebsiteBuilderAPI.Services
 
             <!-- Room Info -->
             <div style='margin-bottom: 25px;'>
-                {(room?.Images == null || !room.Images.Any() ? "" : $@"
-                <img src='{room.Images.First()}' alt='{room.Name}' style='width: 100%; height: 200px; object-fit: cover; border-radius: 8px; margin-bottom: 15px;' />
-                ")}
+                {GetRoomImageHtml(room)}
                 <h4 style='color: #333333; margin: 0 0 10px 0; font-size: 18px;'>{room?.Name ?? "Habitación"}</h4>
                 <p style='color: #666666; margin: 0;'>📍 {room?.City ?? company.City ?? ""}</p>
             </div>

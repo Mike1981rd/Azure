@@ -636,7 +636,8 @@ namespace WebsiteBuilderAPI.Controllers
                     }
 
                     // Step 5: Send confirmation emails
-                    await SendReservationConfirmation(customer.Email, reservation, room);
+                    // Commented out to avoid duplicate emails - ReservationService sends professional HTML email when payment is processed
+                    // await SendReservationConfirmation(customer.Email, reservation, room);
 
                     // Commit transaction
                     await transaction.CommitAsync();
