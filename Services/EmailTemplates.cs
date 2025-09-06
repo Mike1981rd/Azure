@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Linq;
 using WebsiteBuilderAPI.Models;
 
 namespace WebsiteBuilderAPI.Services
@@ -55,11 +56,11 @@ namespace WebsiteBuilderAPI.Services
 
             <!-- Room Info -->
             <div style='margin-bottom: 25px;'>
-                {(string.IsNullOrEmpty(room.MainImage) ? "" : $@"
-                <img src='{room.MainImage}' alt='{room.Name}' style='width: 100%; height: 200px; object-fit: cover; border-radius: 8px; margin-bottom: 15px;' />
+                {(room?.Images == null || !room.Images.Any() ? "" : $@"
+                <img src='{room.Images.First()}' alt='{room.Name}' style='width: 100%; height: 200px; object-fit: cover; border-radius: 8px; margin-bottom: 15px;' />
                 ")}
-                <h4 style='color: #333333; margin: 0 0 10px 0; font-size: 18px;'>{room.Name}</h4>
-                <p style='color: #666666; margin: 0;'>📍 {room.Location ?? company.City ?? ""}</p>
+                <h4 style='color: #333333; margin: 0 0 10px 0; font-size: 18px;'>{room?.Name ?? "Habitación"}</h4>
+                <p style='color: #666666; margin: 0;'>📍 {room?.City ?? company.City ?? ""}</p>
             </div>
 
             <!-- Dates Grid -->
