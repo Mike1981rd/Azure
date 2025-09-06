@@ -14,10 +14,10 @@ namespace WebsiteBuilderAPI.Controllers
     public class ContactController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
-        private readonly EmailService _emailService;
+        private readonly IEmailService _emailService;
         private readonly ILogger<ContactController> _logger;
 
-        public ContactController(ApplicationDbContext context, EmailService emailService, ILogger<ContactController> logger)
+        public ContactController(ApplicationDbContext context, IEmailService emailService, ILogger<ContactController> logger)
         {
             _context = context;
             _emailService = emailService;
