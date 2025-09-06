@@ -16,12 +16,14 @@ namespace WebsiteBuilderAPI.Controllers
         private readonly ApplicationDbContext _context;
         private readonly IEmailService _emailService;
         private readonly ILogger<ContactController> _logger;
+        private readonly IServiceScopeFactory _scopeFactory;
 
-        public ContactController(ApplicationDbContext context, IEmailService emailService, ILogger<ContactController> logger)
+        public ContactController(ApplicationDbContext context, IEmailService emailService, ILogger<ContactController> logger, IServiceScopeFactory scopeFactory)
         {
             _context = context;
             _emailService = emailService;
             _logger = logger;
+            _scopeFactory = scopeFactory;
         }
 
         // GET: api/contact/company/{companyId}/messages
@@ -152,8 +154,10 @@ namespace WebsiteBuilderAPI.Controllers
                 _context.ContactMessages.Add(contactMessage);
                 await _context.SaveChangesAsync();
 
-                // Send notifications asynchronously
-                _ = Task.Run(async () => await SendNotificationsAsync(contactMessage));
+                // Send notifications asynchronously using a new DI scope to avoid disposed DbContext issues
+                var companyIdLocal = contactMessage.CompanyId;
+                var messageIdLocal = contactMessage.Id;
+                _ = Task.Run(async () => await SendNotificationsAsync(companyIdLocal, messageIdLocal));
 
                 var responseDto = new ContactMessageDto
                 {
@@ -384,60 +388,63 @@ namespace WebsiteBuilderAPI.Controllers
             }
         }
 
-        private async Task SendNotificationsAsync(ContactMessage contactMessage)
+        private async Task SendNotificationsAsync(int companyId, int contactMessageId)
         {
             try
             {
-                var settings = await _context.ContactNotificationSettings
-                    .FirstOrDefaultAsync(s => s.CompanyId == contactMessage.CompanyId);
+                using var scope = _scopeFactory.CreateScope();
+                var scopedContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                var emailSvc = scope.ServiceProvider.GetRequiredService<IEmailService>();
+                var notifier = scope.ServiceProvider.GetRequiredService<INotificationService>();
+
+                // Re-fetch fresh entities in this scope
+                var contactMessage = await scopedContext.ContactMessages.FirstOrDefaultAsync(c => c.Id == contactMessageId && c.CompanyId == companyId);
+                if (contactMessage == null) return;
+
+                var settings = await scopedContext.ContactNotificationSettings.FirstOrDefaultAsync(s => s.CompanyId == companyId);
 
                 if (settings?.EmailNotificationsEnabled == true && !string.IsNullOrEmpty(settings.NotificationEmailAddress))
                 {
-                    var emailSubject = settings.EmailSubjectTemplate.Replace("{name}", contactMessage.Name);
+                    var emailSubject = (settings.EmailSubjectTemplate ?? "New Contact Message from {name}").Replace("{name}", contactMessage.Name ?? "");
                     var emailBody = $@"
                         <h2>New Contact Message</h2>
                         <p><strong>Name:</strong> {contactMessage.Name}</p>
                         <p><strong>Email:</strong> {contactMessage.Email}</p>
                         {(!string.IsNullOrEmpty(contactMessage.Phone) ? $"<p><strong>Phone:</strong> {contactMessage.Phone}</p>" : "")}
                         <p><strong>Message:</strong></p>
-                        <p>{contactMessage.Message.Replace("\n", "<br>")}</p>
+                        <p>{(contactMessage.Message ?? string.Empty).Replace("\n", "<br>")}</p>
                         <hr>
                         <p><small>Received at: {contactMessage.CreatedAt:yyyy-MM-dd HH:mm:ss} UTC</small></p>
                     ";
 
-                    await _emailService.SendEmailAsync(
-                        settings.NotificationEmailAddress,
-                        emailSubject,
-                        emailBody
-                    );
+                    await emailSvc.SendEmailAsync(settings.NotificationEmailAddress, emailSubject, emailBody);
 
                     // Mark notification as sent
                     contactMessage.IsNotificationSent = true;
-                    await _context.SaveChangesAsync();
+                    await scopedContext.SaveChangesAsync();
                 }
 
-                // Send a copy to the customer (receipt of their message)
+                // Send a copy to the customer (receipt)
                 if (!string.IsNullOrWhiteSpace(contactMessage.Email))
                 {
                     var customerBody = $@"
                         <h2>Hemos recibido tu mensaje</h2>
                         <p><strong>Nombre:</strong> {contactMessage.Name}</p>
                         <p><strong>Tu mensaje:</strong></p>
-                        <p>{contactMessage.Message.Replace("\n", "<br>")}</p>
+                        <p>{(contactMessage.Message ?? string.Empty).Replace("\n", "<br>")}</p>
                         <hr>
                         <p><small>Enviado: {contactMessage.CreatedAt:yyyy-MM-dd HH:mm:ss} UTC</small></p>
                     ";
-                    await _emailService.SendEmailAsync(contactMessage.Email, "Copia de tu mensaje", customerBody);
+                    await emailSvc.SendEmailAsync(contactMessage.Email, "Copia de tu mensaje", customerBody);
                 }
 
-                // App notification (bell)
+                // App notification (bell) — use scoped notifier, no HttpContext
                 try
                 {
-                    var notifier = HttpContext.RequestServices.GetRequiredService<INotificationService>();
-                    await notifier.CreateAsync(contactMessage.CompanyId,
+                    await notifier.CreateAsync(companyId,
                         type: "contact_message",
                         title: $"Nuevo mensaje de {contactMessage.Name}",
-                        message: contactMessage.Message.Length > 120 ? contactMessage.Message.Substring(0,120)+"..." : contactMessage.Message,
+                        message: (contactMessage.Message ?? string.Empty).Length > 120 ? (contactMessage.Message ?? string.Empty).Substring(0,120)+"..." : (contactMessage.Message ?? string.Empty),
                         data: new { contactMessage.Id, contactMessage.Email },
                         relatedType: "contact_message",
                         relatedId: contactMessage.Id.ToString());
@@ -446,7 +453,7 @@ namespace WebsiteBuilderAPI.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error sending notification for contact message {MessageId}", contactMessage.Id);
+                _logger.LogError(ex, "Error sending notification for contact message {MessageId}", contactMessageId);
             }
         }
 

@@ -54,10 +54,58 @@ namespace WebsiteBuilderAPI.Services
                     .FirstOrDefaultAsync(s => s.CompanyId == 1);
 
                 var provider = settings?.Provider?.Trim() ?? "Postmark";
-                if (!string.IsNullOrEmpty(provider) && provider.Equals("Postmark", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(settings?.ApiKey))
+                if (!string.IsNullOrEmpty(provider) && provider.Equals("Postmark", StringComparison.OrdinalIgnoreCase))
                 {
-                    await SendViaPostmarkAsync(_encryptionService.Decrypt(settings!.ApiKey!), to, subject, htmlBody, from ?? settings.FromEmail, settings.FromName, attachments);
-                    return;
+                    // Resolve Postmark token robustly: decrypt, fallback to plaintext, then to config/env
+                    string? resolvedToken = null;
+                    var stored = settings?.ApiKey;
+                    if (!string.IsNullOrWhiteSpace(stored))
+                    {
+                        try
+                        {
+                            var decrypted = _encryptionService.Decrypt(stored!);
+                            if (!string.IsNullOrWhiteSpace(decrypted) && LooksLikeToken(decrypted))
+                            {
+                                resolvedToken = decrypted;
+                            }
+                            else if (!string.IsNullOrWhiteSpace(stored) && LooksLikeToken(stored))
+                            {
+                                _logger.LogWarning("Postmark token decrypt returned unexpected format; using stored value as-is");
+                                resolvedToken = stored;
+                            }
+                            else
+                            {
+                                _logger.LogWarning("Postmark token decrypt produced unusable value and stored value also looks invalid");
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, "Postmark token decrypt failed; attempting to use stored value as-is");
+                            // Fallback: some environments may have stored plaintext tokens
+                            if (!string.IsNullOrWhiteSpace(stored) && LooksLikeToken(stored))
+                            {
+                                resolvedToken = stored;
+                            }
+                        }
+                    }
+
+                    // Final fallback: configuration/env variable
+                    if (string.IsNullOrWhiteSpace(resolvedToken))
+                    {
+                        var cfgToken = _configuration["Email:Postmark:ServerToken"]
+                                        ?? Environment.GetEnvironmentVariable("EMAIL__POSTMARK__SERVERTOKEN");
+                        if (!string.IsNullOrWhiteSpace(cfgToken))
+                        {
+                            _logger.LogInformation("Using Postmark token from configuration/env fallback");
+                            resolvedToken = cfgToken;
+                        }
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(resolvedToken))
+                    {
+                        await SendViaPostmarkAsync(resolvedToken!, to, subject, htmlBody, from ?? settings?.FromEmail, settings?.FromName, attachments);
+                        return;
+                    }
                 }
 
                 // Fallback: log only
@@ -69,6 +117,20 @@ namespace WebsiteBuilderAPI.Services
                 _logger.LogError(ex, "Failed to send email to {To}", to);
                 throw;
             }
+        }
+
+        private static bool LooksLikeToken(string token)
+        {
+            if (string.IsNullOrWhiteSpace(token)) return false;
+            if (token.Length < 8 || token.Length > 120) return false;
+            foreach (var ch in token)
+            {
+                if (!(char.IsLetterOrDigit(ch) || ch == '-' || ch == '_' ))
+                {
+                    return false;
+                }
+            }
+            return true;
         }
 
         private async Task SendViaPostmarkAsync(string apiToken, string to, string subject, string htmlBody, string? fromEmail, string? fromName, IEnumerable<EmailAttachment>? attachments)
