@@ -54,43 +54,44 @@ namespace WebsiteBuilderAPI.Services
                     .FirstOrDefaultAsync(s => s.CompanyId == 1);
 
                 var provider = settings?.Provider?.Trim() ?? "Postmark";
-                if (!string.IsNullOrEmpty(provider) && provider.Equals("Postmark", StringComparison.OrdinalIgnoreCase))
+                
+                // Resolve token robustly: decrypt, fallback to plaintext, then to config/env
+                string? resolvedToken = null;
+                var stored = settings?.ApiKey;
+                if (!string.IsNullOrWhiteSpace(stored))
                 {
-                    // Resolve Postmark token robustly: decrypt, fallback to plaintext, then to config/env
-                    string? resolvedToken = null;
-                    var stored = settings?.ApiKey;
-                    if (!string.IsNullOrWhiteSpace(stored))
+                    try
                     {
-                        try
+                        var decrypted = _encryptionService.Decrypt(stored!);
+                        if (!string.IsNullOrWhiteSpace(decrypted) && LooksLikeToken(decrypted))
                         {
-                            var decrypted = _encryptionService.Decrypt(stored!);
-                            if (!string.IsNullOrWhiteSpace(decrypted) && LooksLikeToken(decrypted))
-                            {
-                                resolvedToken = decrypted;
-                            }
-                            else if (!string.IsNullOrWhiteSpace(stored) && LooksLikeToken(stored))
-                            {
-                                _logger.LogWarning("Postmark token decrypt returned unexpected format; using stored value as-is");
-                                resolvedToken = stored;
-                            }
-                            else
-                            {
-                                _logger.LogWarning("Postmark token decrypt produced unusable value and stored value also looks invalid");
-                            }
+                            resolvedToken = decrypted;
                         }
-                        catch (Exception ex)
+                        else if (!string.IsNullOrWhiteSpace(stored) && LooksLikeToken(stored))
                         {
-                            _logger.LogWarning(ex, "Postmark token decrypt failed; attempting to use stored value as-is");
-                            // Fallback: some environments may have stored plaintext tokens
-                            if (!string.IsNullOrWhiteSpace(stored) && LooksLikeToken(stored))
-                            {
-                                resolvedToken = stored;
-                            }
+                            _logger.LogWarning("{Provider} token decrypt returned unexpected format; using stored value as-is", provider);
+                            resolvedToken = stored;
+                        }
+                        else
+                        {
+                            _logger.LogWarning("{Provider} token decrypt produced unusable value and stored value also looks invalid", provider);
                         }
                     }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "{Provider} token decrypt failed; attempting to use stored value as-is", provider);
+                        // Fallback: some environments may have stored plaintext tokens
+                        if (!string.IsNullOrWhiteSpace(stored) && LooksLikeToken(stored))
+                        {
+                            resolvedToken = stored;
+                        }
+                    }
+                }
 
-                    // Final fallback: configuration/env variable
-                    if (string.IsNullOrWhiteSpace(resolvedToken))
+                // Final fallback: configuration/env variable
+                if (string.IsNullOrWhiteSpace(resolvedToken))
+                {
+                    if (provider.Equals("Postmark", StringComparison.OrdinalIgnoreCase))
                     {
                         var cfgToken = _configuration["Email:Postmark:ServerToken"]
                                         ?? Environment.GetEnvironmentVariable("EMAIL__POSTMARK__SERVERTOKEN");
@@ -100,10 +101,29 @@ namespace WebsiteBuilderAPI.Services
                             resolvedToken = cfgToken;
                         }
                     }
+                    else if (provider.Equals("Brevo", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var cfgToken = _configuration["Email:Brevo:ApiKey"]
+                                        ?? Environment.GetEnvironmentVariable("EMAIL__BREVO__APIKEY");
+                        if (!string.IsNullOrWhiteSpace(cfgToken))
+                        {
+                            _logger.LogInformation("Using Brevo token from configuration/env fallback");
+                            resolvedToken = cfgToken;
+                        }
+                    }
+                }
 
-                    if (!string.IsNullOrWhiteSpace(resolvedToken))
+                // Send via the appropriate provider
+                if (!string.IsNullOrWhiteSpace(resolvedToken))
+                {
+                    if (provider.Equals("Postmark", StringComparison.OrdinalIgnoreCase))
                     {
                         await SendViaPostmarkAsync(resolvedToken!, to, subject, htmlBody, from ?? settings?.FromEmail, settings?.FromName, attachments);
+                        return;
+                    }
+                    else if (provider.Equals("Brevo", StringComparison.OrdinalIgnoreCase))
+                    {
+                        await SendViaBrevoAsync(resolvedToken!, to, subject, htmlBody, from ?? settings?.FromEmail, settings?.FromName, attachments);
                         return;
                     }
                 }
@@ -173,6 +193,48 @@ namespace WebsiteBuilderAPI.Services
                 throw new InvalidOperationException($"Postmark send failed: {(int)resp.StatusCode}");
             }
             _logger.LogInformation("Email sent via Postmark to {To} - {Subject}", to, subject);
+        }
+
+        private async Task SendViaBrevoAsync(string apiKey, string to, string subject, string htmlBody, string? fromEmail, string? fromName, IEnumerable<EmailAttachment>? attachments)
+        {
+            var client = _httpClientFactory.CreateClient();
+            client.BaseAddress = new Uri("https://api.brevo.com/v3/");
+            client.DefaultRequestHeaders.Accept.Clear();
+            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            client.DefaultRequestHeaders.Add("api-key", apiKey);
+
+            var senderEmail = fromEmail ?? _configuration["Email:DefaultFrom"] ?? "no-reply@localhost";
+            var senderName = fromName ?? "Your Company";
+
+            var payload = new
+            {
+                sender = new
+                {
+                    email = senderEmail,
+                    name = senderName
+                },
+                to = new[] { new { email = to } },
+                subject = subject,
+                htmlContent = htmlBody,
+                attachments = attachments?.Select(a => new
+                {
+                    name = a.FileName,
+                    content = Convert.ToBase64String(a.Content)
+                }).ToArray()
+            };
+
+            var json = JsonConvert.SerializeObject(payload);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+            var resp = await client.PostAsync("smtp/email", content);
+            
+            if (!resp.IsSuccessStatusCode)
+            {
+                var body = await resp.Content.ReadAsStringAsync();
+                _logger.LogError("Brevo send failed: {Status} {Body}", (int)resp.StatusCode, body);
+                throw new InvalidOperationException($"Brevo send failed: {(int)resp.StatusCode}");
+            }
+            
+            _logger.LogInformation("Email sent via Brevo to {To} - {Subject}", to, subject);
         }
 
         public async Task SendWelcomeEmailAsync(string email, string firstName)

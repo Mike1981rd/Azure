@@ -70,7 +70,11 @@ namespace WebsiteBuilderAPI.Controllers
                 _context.Set<EmailProviderSettings>().Add(s);
             }
 
-            s.Provider = string.IsNullOrWhiteSpace(dto.Provider) ? "Postmark" : dto.Provider;
+            // Validate provider
+            var validProviders = new[] { "Postmark", "SendGrid", "Brevo" };
+            s.Provider = string.IsNullOrWhiteSpace(dto.Provider) || !validProviders.Contains(dto.Provider, StringComparer.OrdinalIgnoreCase) 
+                ? "Postmark" 
+                : dto.Provider;
             if (!string.IsNullOrWhiteSpace(dto.ApiKey))
             {
                 s.ApiKey = _encryption.Encrypt(dto.ApiKey);
