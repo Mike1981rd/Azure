@@ -24,6 +24,35 @@ namespace WebsiteBuilderAPI.Services
             _logger = logger;
         }
 
+        public async Task<List<CustomerPaymentHistoryItemDto>> GetPaymentsHistoryAsync(int companyId, int customerId)
+        {
+            try
+            {
+                // Fetch reservations and flatten payments for this customer
+                var items = await _context.Reservations
+                    .Include(r => r.Payments)
+                    .Where(r => r.CompanyId == companyId && r.CustomerId == customerId)
+                    .SelectMany(r => r.Payments.Select(p => new CustomerPaymentHistoryItemDto
+                    {
+                        ReservationId = r.Id,
+                        Amount = p.Amount,
+                        PaymentMethod = p.PaymentMethod,
+                        Status = p.Status,
+                        PaymentDate = p.PaymentDate,
+                        TransactionId = p.TransactionId
+                    }))
+                    .OrderByDescending(p => p.PaymentDate)
+                    .ToListAsync();
+
+                return items;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting payments history for customer {CustomerId} company {CompanyId}", customerId, companyId);
+                throw;
+            }
+        }
+
         // Main CRUD operations
         public async Task<PagedResult<CustomerDto>> GetCustomersAsync(int companyId, CustomerFilterDto filter)
         {

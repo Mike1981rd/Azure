@@ -60,5 +60,8 @@ namespace WebsiteBuilderAPI.Services
         Task<bool> ChangePasswordAsync(int customerId, CustomerPasswordChangeDto dto);
         Task<List<CustomerSecurityQuestionDto>> GetSecurityQuestionsAsync(int customerId);
         Task<ResetPasswordResponseDto> ResetPasswordAsync(int customerId, ResetPasswordDto dto);
+
+        // Payments history (reservations -> payments)
+        Task<List<CustomerPaymentHistoryItemDto>> GetPaymentsHistoryAsync(int companyId, int customerId);
     }
 }

@@ -327,6 +327,25 @@ namespace WebsiteBuilderAPI.Controllers
             }
         }
 
+        // GET: api/customers/{id}/payments-history
+        [HttpGet("{id}/payments-history")]
+        public async Task<IActionResult> GetPaymentsHistory(int id)
+        {
+            try
+            {
+                var companyIdClaim = User.FindFirst("companyId")?.Value;
+                int companyId = string.IsNullOrEmpty(companyIdClaim) ? 1 : int.Parse(companyIdClaim);
+
+                var list = await _customerService.GetPaymentsHistoryAsync(companyId, id);
+                return Ok(list);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting payments history for customer {Id}", id);
+                return StatusCode(500, new { error = "An error occurred while retrieving payments history", details = ex.Message });
+            }
+        }
+
         // POST: api/customers/{id}/payment-methods
         [HttpPost("{id}/payment-methods")]
         public async Task<IActionResult> AddPaymentMethod(int id, [FromBody] AddPaymentMethodDto dto)
