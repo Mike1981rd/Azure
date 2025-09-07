@@ -1,40 +1,39 @@
 using System.Globalization;
 using System.Linq;
+using System.Text.RegularExpressions;
 using WebsiteBuilderAPI.Models;
 
 namespace WebsiteBuilderAPI.Services
 {
     public static class EmailTemplates
     {
-        private static string GetRoomImageHtml(Room? room)
+        private static bool IsRemoteUrl(string? url)
         {
-            if (room?.Images == null || !room.Images.Any())
-                return "";
-
-            var firstImage = room.Images.First();
-            var imageUrl = "";
-            
-            if (firstImage.StartsWith("/"))
-            {
-                // Es path relativo, agregar dominio base
-                var apiUrl = Environment.GetEnvironmentVariable("API_URL") ?? "https://websitebuilder-api-staging.onrender.com";
-                imageUrl = $"{apiUrl}{firstImage}";
-            }
-            else if (!firstImage.StartsWith("http"))
-            {
-                // No tiene protocolo, asumir que está en uploads
-                var apiUrl = Environment.GetEnvironmentVariable("API_URL") ?? "https://websitebuilder-api-staging.onrender.com";
-                imageUrl = $"{apiUrl}/uploads/{firstImage}";
-            }
-            else
-            {
-                // Ya es URL completa
-                imageUrl = firstImage;
-            }
-
-            return $@"<img src='{imageUrl}' alt='{room.Name}' style='width: 100%; height: 200px; object-fit: cover; border-radius: 8px; margin-bottom: 15px;' />";
+            if (string.IsNullOrWhiteSpace(url)) return false;
+            return url.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+                || url.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
         }
 
+        private static string? FirstRemoteImage(Room? room)
+        {
+            var list = room?.Images;
+            if (list == null || list.Count == 0) return null;
+            foreach (var u in list)
+            {
+                if (IsRemoteUrl(u)) return u;
+            }
+            return null;
+        }
+
+        private static string MinifyHtml(string html)
+        {
+            if (string.IsNullOrWhiteSpace(html)) return html;
+            // Remove excessive whitespace between tags and collapse runs of spaces
+            var noNewlines = html.Replace("\r", string.Empty).Replace("\n", string.Empty);
+            noNewlines = Regex.Replace(noNewlines, @">\s+<", "><");
+            noNewlines = Regex.Replace(noNewlines, @"\s{2,}", " ");
+            return noNewlines.Trim();
+        }
         public static string GenerateReservationConfirmationHtml(
             Reservation reservation,
             Customer customer,
@@ -47,6 +46,9 @@ namespace WebsiteBuilderAPI.Services
             var totalAmount = reservation.TotalAmount.ToString("N2", CultureInfo.InvariantCulture);
             var confirmationNumber = $"RES{reservation.Id:D6}";
             var primaryColor = company.PrimaryColor ?? "#22c55e";
+
+            var logoUrl = IsRemoteUrl(company.Logo) ? company.Logo : null;
+            var roomImgUrl = FirstRemoteImage(room);
 
             var html = $@"
 <!DOCTYPE html>
@@ -61,7 +63,7 @@ namespace WebsiteBuilderAPI.Services
         <!-- Header -->
         <div style='background-color: {primaryColor}; padding: 30px; text-align: center;'>
             <h1 style='color: #ffffff; margin: 0; font-size: 28px;'>{company.Name}</h1>
-            {(string.IsNullOrEmpty(company.Logo) ? "" : $@"<img src='{company.Logo}' alt='{company.Name}' style='max-width: 200px; max-height: 80px; margin-top: 10px;' />")}
+            {(string.IsNullOrEmpty(logoUrl) ? "" : $@"<img src='{logoUrl}' alt='{company.Name}' width='200' style='max-width: 200px; max-height: 80px; margin-top: 10px; height: auto; border: 0;' />")}
         </div>
 
         <!-- Success Message -->
@@ -85,7 +87,7 @@ namespace WebsiteBuilderAPI.Services
 
             <!-- Room Info -->
             <div style='margin-bottom: 25px;'>
-                {GetRoomImageHtml(room)}
+                {(string.IsNullOrEmpty(roomImgUrl) ? "" : $@"<img src='{roomImgUrl}' alt='{room?.Name ?? "Habitación"}' width='600' style='width: 100%; height: 200px; object-fit: cover; border-radius: 8px; margin-bottom: 15px; border: 0;' />")}
                 <h4 style='color: #333333; margin: 0 0 10px 0; font-size: 18px;'>{room?.Name ?? "Habitación"}</h4>
                 <p style='color: #666666; margin: 0;'>📍 {room?.City ?? company.City ?? ""}</p>
             </div>
@@ -173,7 +175,7 @@ namespace WebsiteBuilderAPI.Services
 </body>
 </html>";
 
-            return html;
+            return MinifyHtml(html);
         }
 
         public static string GenerateAdminPaymentNotificationHtml(
@@ -299,7 +301,7 @@ namespace WebsiteBuilderAPI.Services
 </body>
 </html>";
 
-            return html;
+            return MinifyHtml(html);
         }
     }
 }
