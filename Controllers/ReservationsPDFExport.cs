@@ -8,11 +8,6 @@ namespace WebsiteBuilderAPI.Controllers
     {
         private readonly IReservationReceiptService _reservationReceiptService;
 
-        public ReservationsController(IReservationService reservationService, IReservationReceiptService reservationReceiptService) : this(reservationService)
-        {
-            _reservationReceiptService = reservationReceiptService;
-        }
-
         /// <summary>
         /// Exporta una reservación a PDF (recibo)
         /// </summary>

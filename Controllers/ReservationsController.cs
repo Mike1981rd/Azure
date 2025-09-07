@@ -15,9 +15,12 @@ namespace WebsiteBuilderAPI.Controllers
     {
         private readonly IReservationService _reservationService;
 
-        public ReservationsController(IReservationService reservationService)
+        public ReservationsController(
+            IReservationService reservationService,
+            IReservationReceiptService reservationReceiptService)
         {
             _reservationService = reservationService;
+            _reservationReceiptService = reservationReceiptService;
         }
 
         // GET: api/reservations
