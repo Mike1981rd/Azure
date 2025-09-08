@@ -146,9 +146,10 @@ namespace WebsiteBuilderAPI.Services
 
         public async Task<User?> GetUserByEmailAsync(string email)
         {
+            // Case-insensitive match for email to avoid login failures due to casing
             return await _context.Users
                 .Include(u => u.Company)
-                .FirstOrDefaultAsync(u => u.Email == email);
+                .FirstOrDefaultAsync(u => EF.Functions.ILike(u.Email, email));
         }
 
         public async Task<User?> GetUserByIdAsync(int userId)
