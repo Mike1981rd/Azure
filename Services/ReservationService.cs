@@ -750,26 +750,104 @@ Estado: Confirmado ✅";
 
         public async Task<Dictionary<string, object>> GetReservationStatsAsync(int companyId, DateTime? startDate = null, DateTime? endDate = null)
         {
-            var query = _context.Reservations.Where(r => r.CompanyId == companyId);
-
-            if (startDate.HasValue)
-                query = query.Where(r => r.CheckInDate >= startDate.Value);
-
-            if (endDate.HasValue)
-                query = query.Where(r => r.CheckOutDate <= endDate.Value);
-
-            var stats = new Dictionary<string, object>
+            try
             {
-                ["totalReservations"] = await query.CountAsync(),
-                ["pendingReservations"] = await query.CountAsync(r => r.Status == "Pending"),
-                ["confirmedReservations"] = await query.CountAsync(r => r.Status == "Confirmed"),
-                ["checkedInReservations"] = await query.CountAsync(r => r.Status == "CheckedIn"),
-                ["cancelledReservations"] = await query.CountAsync(r => r.Status == "Cancelled"),
-                ["totalRevenue"] = await query.Where(r => r.Status != "Cancelled").SumAsync(r => r.TotalAmount),
-                ["averageStayLength"] = await query.Where(r => r.Status != "Cancelled").AverageAsync(r => (double)r.NumberOfNights)
-            };
+                // Normalize range to [startInclusive, endExclusive) in UTC for consistent in-memory comparisons
+                var startInclusive = startDate.HasValue
+                    ? DateTime.SpecifyKind(startDate.Value.Date, DateTimeKind.Utc)
+                    : (DateTime?)null;
+                var endExclusive = endDate.HasValue
+                    ? DateTime.SpecifyKind(endDate.Value.Date.AddDays(1), DateTimeKind.Utc)
+                    : (DateTime?)null;
 
-            return stats;
+                // Fetch minimal reservation projection once
+                var reservations = await _context.Reservations
+                    .AsNoTracking()
+                    .Where(r => r.CompanyId == companyId)
+                    .Select(r => new {
+                        r.Status,
+                        r.CheckInDate,
+                        r.CheckOutDate,
+                        r.TotalAmount,
+                        r.NumberOfNights
+                    })
+                    .ToListAsync();
+
+                // Legacy metrics with optional range filtering
+                var legacyFiltered = reservations.AsEnumerable();
+                if (startInclusive.HasValue)
+                    legacyFiltered = legacyFiltered.Where(r => r.CheckInDate >= startInclusive.Value);
+                if (endExclusive.HasValue)
+                    legacyFiltered = legacyFiltered.Where(r => r.CheckOutDate < endExclusive.Value);
+
+                var totalReservations = legacyFiltered.Count();
+                var pendingReservations = legacyFiltered.Count(r => r.Status == "Pending");
+                var confirmedReservations = legacyFiltered.Count(r => r.Status == "Confirmed");
+                var checkedInReservations = legacyFiltered.Count(r => r.Status == "CheckedIn");
+                var cancelledReservations = legacyFiltered.Count(r => r.Status == "Cancelled");
+                var totalRevenue = legacyFiltered
+                    .Where(r => r.Status != "Cancelled")
+                    .Select(r => (decimal?)r.TotalAmount)
+                    .Sum() ?? 0m;
+                var averageStayLength = legacyFiltered
+                    .Where(r => r.Status != "Cancelled")
+                    .Select(r => (double?)r.NumberOfNights)
+                    .DefaultIfEmpty(0d)
+                    .Average() ?? 0d;
+
+                // Confirmed by Check-In within range
+                var confirmedCheckIns = reservations
+                    .Where(r => r.Status == "Confirmed")
+                    .Where(r => !startInclusive.HasValue || r.CheckInDate >= startInclusive.Value)
+                    .Where(r => !endExclusive.HasValue || r.CheckInDate < endExclusive.Value)
+                    .Count();
+
+                // Payments (paid revenue) with minimal projection
+                var payments = await _context.ReservationPayments
+                    .AsNoTracking()
+                    .Where(p => p.Reservation.CompanyId == companyId && p.Status == "Completed")
+                    .Select(p => new { p.Amount, p.ReservationId, p.PaymentDate })
+                    .ToListAsync();
+
+                var paidFiltered = payments.AsEnumerable();
+                if (startInclusive.HasValue)
+                    paidFiltered = paidFiltered.Where(p => p.PaymentDate >= startInclusive.Value);
+                if (endExclusive.HasValue)
+                    paidFiltered = paidFiltered.Where(p => p.PaymentDate < endExclusive.Value);
+
+                var paidRevenue = paidFiltered.Select(p => (decimal?)p.Amount).Sum() ?? 0m;
+                var paidReservations = paidFiltered.Select(p => p.ReservationId).Distinct().Count();
+
+                return new Dictionary<string, object>
+                {
+                    ["totalReservations"] = totalReservations,
+                    ["pendingReservations"] = pendingReservations,
+                    ["confirmedReservations"] = confirmedReservations,
+                    ["checkedInReservations"] = checkedInReservations,
+                    ["cancelledReservations"] = cancelledReservations,
+                    ["totalRevenue"] = totalRevenue,
+                    ["averageStayLength"] = averageStayLength,
+                    ["confirmedCheckIns"] = confirmedCheckIns,
+                    ["paidRevenue"] = paidRevenue,
+                    ["paidReservations"] = paidReservations
+                };
+            }
+            catch (Exception)
+            {
+                return new Dictionary<string, object>
+                {
+                    ["totalReservations"] = 0,
+                    ["pendingReservations"] = 0,
+                    ["confirmedReservations"] = 0,
+                    ["checkedInReservations"] = 0,
+                    ["cancelledReservations"] = 0,
+                    ["totalRevenue"] = 0m,
+                    ["averageStayLength"] = 0d,
+                    ["confirmedCheckIns"] = 0,
+                    ["paidRevenue"] = 0m,
+                    ["paidReservations"] = 0
+                };
+            }
         }
     }
 }
