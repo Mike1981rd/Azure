@@ -207,6 +207,46 @@ namespace WebsiteBuilderAPI.Controllers
                 return StatusCode(500, new { error = "Error al inicializar las opciones" });
             }
         }
+
+        /// <summary>
+        /// Public endpoint: Get config options by type for a specific company (no auth required)
+        /// </summary>
+        [HttpGet("public/company/{companyId}/type/{type}")]
+        [AllowAnonymous]
+        public async Task<ActionResult<List<ConfigOptionDto>>> GetPublicByType(int companyId, string type)
+        {
+            try
+            {
+                _logger.LogInformation("Public request for ConfigOptions: companyId={CompanyId}, type={Type}", companyId, type);
+                var options = await _configOptionService.GetByTypeAsync(companyId, type);
+                return Ok(options);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting public options for company {CompanyId} type {Type}", companyId, type);
+                return StatusCode(500, new { error = "Error retrieving options" });
+            }
+        }
+
+        /// <summary>
+        /// Public endpoint: Get all config options for a specific company (no auth required)
+        /// </summary>
+        [HttpGet("public/company/{companyId}")]
+        [AllowAnonymous]
+        public async Task<ActionResult<List<ConfigOptionDto>>> GetPublicAll(int companyId)
+        {
+            try
+            {
+                _logger.LogInformation("Public request for all ConfigOptions: companyId={CompanyId}", companyId);
+                var options = await _configOptionService.GetAllAsync(companyId);
+                return Ok(options);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting all public options for company {CompanyId}", companyId);
+                return StatusCode(500, new { error = "Error retrieving options" });
+            }
+        }
     }
 
     public class IncrementUsageDto
